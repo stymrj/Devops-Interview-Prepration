@@ -8,7 +8,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 
 | # | Subject | Guides |
 |---|---------|--------|
-| 1 | [Linux & System Administration](linux-system-admin/) | 3/6 |
+| 1 | [Linux & System Administration](linux-system-admin/) | 4/6 |
 | 2 | [Git & Version Control](version-control/) | ⬜ |
 | 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | ⬜ |
 | 4 | [Containers (Docker)](containers/) | ⬜ |
@@ -28,6 +28,7 @@ A new guide lands here every day. Progress so far:
 - [x] 01 — [Linux Fundamentals for DevOps](linux-system-admin/01-linux-fundamentals-for-devops.md)
 - [x] 02 — [Filesystem Hierarchy & Permissions](linux-system-admin/02-filesystem-hierarchy-permissions.md) (+ [hands-on lab](linux-system-admin/labs/02-filesystem-permissions-lab.md), [cheat sheet](linux-system-admin/cheat-sheets/02-filesystem-permissions-cheatsheet.md))
 - [x] 03 — [Process Management & systemd](linux-system-admin/03-process-management-systemd.md) (+ [hands-on lab](linux-system-admin/labs/03-process-management-systemd-lab.md), [cheat sheet](linux-system-admin/cheat-sheets/03-process-management-systemd-cheatsheet.md))
+- [x] 04 — [Networking on Linux](linux-system-admin/04-networking-on-linux.md) (+ [hands-on lab](linux-system-admin/labs/04-networking-on-linux-lab.md), [cheat sheet](linux-system-admin/cheat-sheets/04-networking-on-linux-cheatsheet.md))
 
 ---
 
