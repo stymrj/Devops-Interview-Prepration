@@ -1,2 +1,32 @@
-# Devops-Interview-Prepration
-Interview questions with in-depth answers covering CI/CD, GitOps, Cloud (AWS, Azure, GCP), Kubernetes, Terraform, OpenTofu, Linux, Observability (OTel/Prometheus), Security, System Design &amp; Incident Debugging. Perfect for all experience levels! 🌟🚀
+# DevOps Interview Preparation
+
+*Deep-dive Q&A guides for DevOps & SRE interviews — written exactly how you should answer in the room.*
+
+Every guide follows one format: **question → how to answer it out loud → code/commands → key point**. Practice reading the answers aloud until they sound natural.
+
+## Subjects
+
+| # | Subject | Guides |
+|---|---------|--------|
+| 1 | [Linux & System Administration](linux-system-admin/) | ⬜ |
+| 2 | [Git & Version Control](version-control/) | ⬜ |
+| 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | ⬜ |
+| 4 | [Containers (Docker)](containers/) | ⬜ |
+| 5 | [Kubernetes](kubernetes/) | ⬜ |
+| 6 | [CI/CD](ci-cd/) | ⬜ |
+| 7 | [Infrastructure as Code](infrastructure-as-code/) | ⬜ |
+| 8 | [Cloud (AWS)](cloud-aws/) | ⬜ |
+| 9 | [Monitoring & Logging](monitoring-logging/) | ⬜ |
+| 10 | [Networking & Security](networking-security/) | ⬜ |
+| 11 | [Best Practices](best-practices/) | ⬜ |
+| 12 | [Mock Interviews](mock-interviews/) | ⬜ |
+
+## Publishing log
+
+A new guide lands here every day. Progress so far:
+
+- [x] 01 — [Linux Fundamentals for DevOps](linux-system-admin/01-linux-fundamentals-for-devops.md)
+
+---
+
+*Built for interview prep, one deep-dive at a time.*
