@@ -8,17 +8,17 @@
 
 ## Table of Contents
 
-1. Why Linux Matters in DevOps
-2. Filesystem Hierarchy
-3. File Permissions & Ownership
-4. Process Management
-5. systemd & Services
-6. Package Management
-7. Users & Groups
-8. SSH & Remote Access
-9. Disk Usage & Monitoring
-10. Environment Variables & Shell Basics
-11. Common Troubleshooting Scenarios
+1. [Why Linux Matters in DevOps](#why-linux-matters-in-devops)
+2. [Filesystem Hierarchy](#filesystem-hierarchy)
+3. [File Permissions & Ownership](#file-permissions--ownership)
+4. [Process Management](#process-management)
+5. [systemd & Services](#systemd--services)
+6. [Package Management](#package-management)
+7. [Users & Groups](#users--groups)
+8. [SSH & Remote Access](#ssh--remote-access)
+9. [Disk Usage & Monitoring](#disk-usage--monitoring)
+10. [Environment Variables & Shell Basics](#environment-variables--shell-basics)
+11. [Common Troubleshooting Scenarios](#common-troubleshooting-scenarios)
 
 ---
 
