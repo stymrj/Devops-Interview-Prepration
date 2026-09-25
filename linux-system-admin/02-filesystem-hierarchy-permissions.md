@@ -144,5 +144,197 @@ If I ever see 777 in a production audit, I treat it as a finding, not a configur
 **Key Point:** "777 means you stopped thinking. Fix ownership and groups instead — `chown` to the service user, or a shared group with SGID. Reach for ACLs before you ever reach for 777."
 
 ---
+## umask and Default Permissions
 
-*Part 2 continues with umask, ACLs, inodes, links, and production permission debugging.*
+### Q9: How does umask work? How do default file and directory permissions get decided?
+
+**How to Answer:**
+
+"When you create a file or directory, the system doesn't just pick permissions at random — it starts from a base and subtracts the umask. The base is 666 for files and 777 for directories. Directories get the execute bit by default because without it you couldn't traverse into them; files don't, because you don't want every new file to be executable.
+
+So with the classic umask of 022: files become 666 minus 022 = 644, directories become 777 minus 022 = 755. With a stricter umask of 027, files are 640 and directories 750 — group can read, others get nothing. That's the standard for multi-user servers where you don't want every user's files world-readable.
+
+A few things interviewers like to probe: umask is per-process and inherited — you set it in `/etc/profile`, `~/.bashrc`, or for services via the `UMask=` directive in a systemd unit. And here's the trap: if your app explicitly calls `chmod` or `open()` with a mode, umask doesn't matter — the app's mode wins, masked by umask. So 'I set umask 077 but my app still creates world-readable files' usually means the app sets its own permissions and you need to fix it in the app config, not the shell."
+
+```bash
+umask          # show current mask, e.g. 0022
+umask 027      # set stricter default
+touch f && mkdir d && ls -ld f d   # observe 640 / 750
+# systemd service unit:
+# [Service]
+# User=appuser
+# UMask=0027
+```
+
+**Key Point:** "Base 666 for files, 777 for dirs, minus umask. But an app that sets its own mode bypasses it — umask is a default, not a policy."
+
+---
+
+### Q10: What's the difference between chown and chgrp — and what breaks when a container writes files as root onto a host volume?
+
+**How to Answer:**
+
+"`chown` changes the owner user and optionally the group — `chown alice:devs file`. `chgrp` changes only the group — `chgrp devs file`. In practice `chown` with the `user:group` syntax covers both, and `-R` makes it recursive. One handy trick is `chown --reference=goodfile target` which copies ownership from another file — useful when you've fixed one file and want the rest to match.
+
+The container angle is where this bites people. If your container runs as root — which is the Docker default — and writes to a bind-mounted host directory, those files land on the host owned by root. Then your host user, or the next container running as non-root, can't modify them. I've seen CI pipelines fail on cleanup for exactly this reason: the build container ran as root, wrote artifacts, and the next step running as the `jenkins` user couldn't delete them.
+
+The fixes: run the container with `--user $(id -u):$(id -g)` so files are created with your UID, or design the image with a `USER` directive and a known UID. For named volumes, Docker initializes the volume with the image's directory ownership, which sidesteps it. And never 'fix' it with 777 on the host mount — you're one misconfiguration away from a host compromise."
+
+```bash
+chown -R appuser:appgroup /var/lib/myapp
+chgrp -R devs /srv/shared && chmod -R g+s /srv/shared
+docker run --user $(id -u):$(id -g) -v $PWD/data:/data myimage
+```
+
+**Key Point:** "Root in a container is root on the host's filesystem for bind mounts. Run containers as a non-root UID or the host inherits a permission mess."
+
+---
+
+## ACLs and Extended Attributes
+
+### Q11: What are ACLs, and when do standard Unix permissions fall short?
+
+**How to Answer:**
+
+"Standard Unix permissions give you exactly one owner, one group, and everyone else. That breaks down the moment two different teams need different access to the same directory — say the `backend` team needs read-write on `/srv/releases` and the `qa` team needs read-only, plus the deploy service user needs full access. You can't express that with user/group/other.
+
+That's what POSIX ACLs are for. `setfacl -m u:qa:r-x /srv/releases` gives the qa user read-execute without touching the owner or group. `setfacl -m g:backend:rwx` for the group. And default ACLs — `setfacl -d -m g:backend:rwx dir` — act like inheritance: new files created inside automatically get those ACL entries, which solves the 'new file has wrong group access' problem more flexibly than SGID.
+
+You can spot ACLs because `ls -l` shows a `+` after the permission bits, and `getfacl` shows the full picture. The gotchas I always mention: `cp` without `-a`, `mv` across filesystems, and `tar` without `--acls` can silently drop ACLs — so your backup/restore pipeline needs to preserve them. And on NFS, both client and server need ACL support or they get quietly ignored, which is a nasty surprise."
+
+```bash
+setfacl -m u:qa:r-x /srv/releases
+setfacl -m g:backend:rwx /srv/releases
+setfacl -d -m g:backend:rwx /srv/releases   # default/inherited ACL
+getfacl /srv/releases
+ls -ld /srv/releases   # drwxr-x---+  <- the + means ACLs present
+```
+
+**Key Point:** "One user, one group isn't enough for shared directories. ACLs give per-user/per-group entries plus inheritance — but verify your backup tooling preserves them."
+
+---
+
+### Q12: What are file attributes (chattr/lsattr)? When would you make a file immutable?
+
+**How to Answer:**
+
+"Beyond the permission bits, ext4 and xfs support extended attributes you manage with `chattr` and view with `lsattr`. The two I actually use: `+i` for immutable and `+a` for append-only.
+
+Immutable means the file cannot be modified, deleted, or renamed — not even by root — until you remove the flag with `chattr -i`. I use it on files that must never change unexpectedly: `/etc/resolv.conf` on boxes where DHCP keeps overwriting DNS, or a pinned `authorized_keys`. Append-only is perfect for logs: with `+a`, processes can append but nobody can truncate or overwrite — it gives you tamper-evident logs even if an attacker gets in.
+
+The classic interview trap this answers: 'I'm root and I still get permission denied writing to a file.' Most people check `ls -l` and get confused. The answer is `lsattr` — if you see that little `i`, that's your culprit. Same story with 'I can't delete this file as root.' Attributes sit below permissions in the enforcement stack, and they survive reboots, so they're a legitimate hardening layer — but document them, because the next on-call engineer will be confused otherwise."
+
+```bash
+lsattr /etc/resolv.conf
+chattr +i /etc/resolv.conf        # immutable
+chattr +a /var/log/app/audit.log # append-only for tamper-evident logs
+chattr -i /etc/resolv.conf        # remove when you need to change it
+```
+
+**Key Point:** "When root gets 'permission denied', check `lsattr` before anything else. `+i` and `+a` are enforcement below the permission bits — powerful, so document them."
+
+---
+
+## Links, Inodes, and Deleted-but-Open Files
+
+### Q13: What are inodes? "Disk has free space but writes fail" — how do you debug it?
+
+**How to Answer:**
+
+"An inode is the filesystem's metadata record for a file — it holds permissions, ownership, timestamps, and pointers to the data blocks. The filename itself is not in the inode; it's just a directory entry pointing at an inode number. One filesystem has a fixed number of inodes, decided at format time.
+
+So here's the failure mode: `df -h` shows gigabytes free, but writes fail with 'No space left on device.' That's inode exhaustion — millions of tiny files, like a runaway session directory, a mail queue, or an app cache that never cleans up. Each tiny file eats one inode regardless of size. The diagnosis is `df -i` — if IUse% is at 100%, that's it. Then `find` the culprit: something like hunting which directory holds the most files.
+
+The fix is deleting the small files — and the prevention is monitoring `df -i` alongside `df -h`, because almost nobody alerts on inodes until the first outage. You can also format with more inodes via `mkfs -N`, but you can't change it on a live filesystem, so plan ahead for workloads you know create millions of files."
+
+```bash
+df -i /var              # check inode usage, not just space
+df -h /var              # space looks fine...
+# find directories with the most files:
+find /var/spool -xdev -type f | cut -d/ -f1-4 | sort | uniq -c | sort -rn | head
+```
+
+**Key Point:** "`df -h` lies by omission — always check `df -i` too. Inode exhaustion from millions of tiny files is a classic 'but there's free space!' outage."
+
+---
+
+### Q14: What's the difference between hard links and soft links — and what breaks with each?
+
+**How to Answer:**
+
+"A hard link is just another directory entry pointing at the same inode — same file, two names. There's no 'original' versus 'link'; delete either name and the data survives until the link count hits zero. Constraints: hard links can't cross filesystems, and you generally can't hard-link directories. Where I use them: backup tools like rsnapshot use hard links for space-efficient incremental backups — unchanged files are just additional links to the same inode.
+
+A soft link — symlink — is its own tiny file that stores a *path* to the target. It can cross filesystems, it can point at directories, and `ls -l` shows it with an arrow. But it breaks if the target moves or is deleted — you get a dangling symlink. That's also its power: versioned deploys. `/opt/myapp/current -> /opt/myapp/release-123` — to roll back, you just repoint the symlink. Atomic, instant.
+
+The interview traps: `cp` follows symlinks by default and copies the *target's* content, which surprises people; `rm` on a symlink removes the link, not the target — but `rm -rf link/` with a trailing slash follows into the target directory, which has caused real disasters. And on modern distros, `/bin` is a symlink to `/usr/bin` — the usrmerge — which is why those 'duplicate' directories exist."
+
+```bash
+ln file.txt hardlink.txt        # same inode
+ln -s /opt/myapp/release-123 /opt/myapp/current
+ls -li                          # see inode numbers; hard links share one
+readlink -f ./current           # resolve a symlink chain
+find / -xtype l                 # find dangling symlinks
+```
+
+**Key Point:** "Hard links share an inode — no original, no copy. Symlinks store a path — flexible, but they dangle. Know which one `cp` and `rm` follow before you touch them."
+
+---
+
+## Permission Debugging in Production
+
+### Q15: How do you audit a system for risky permissions?
+
+**How to Answer:**
+
+"I treat permission auditing as a checklist I can run on any box or bake into image builds. The `find` one-liners do the heavy lifting:
+
+SUID binaries — `find / -perm -4000 -type f` — any surprise here is a privilege-escalation candidate. SGID — `-perm -2000`. World-writable files — `-perm -0002 -type f`. World-writable directories *without* the sticky bit — that's the dangerous combination, someone else's files deletable. SSH material with loose permissions — `~/.ssh` should be 700, keys 600, or sshd refuses them, which is its own debugging session.
+
+In practice I run this against golden images in CI: build the image, run the audit, diff against a known-good baseline, fail the build on new SUID binaries or new world-writable paths. On live systems I scope it — full-filesystem finds are slow, so I target `/usr`, `/opt`, `/srv`, and the app directories rather than scanning all of `/proc` and `/sys`.
+
+The mindset I communicate in interviews: permissions drift. Someone debugs at 2 AM with a chmod, forgets to revert it, and six months later it's an incident. Audits exist to catch the drift."
+
+```bash
+find / -xdev -perm -4000 -type f 2>/dev/null   # SUID binaries
+find / -xdev -perm -2000 -type f 2>/dev/null   # SGID binaries
+find / -xdev -perm -0002 -type d ! -perm -1000 2>/dev/null  # world-writable dirs WITHOUT sticky bit
+ls -ld ~/.ssh ~/.ssh/*   # 700 on dir, 600 on keys
+```
+
+**Key Point:** "Permissions drift after every 2 AM debug session. Audit SUID/SGID and world-writable paths against a baseline — in CI for images, on a schedule for live boxes."
+
+---
+
+### Q16: Scenario — your app gets "Permission denied" writing to /var/log/myapp. Walk me through your triage.
+
+**How to Answer:**
+
+"I debug this layer by layer, outside-in, because the failure is rarely where you first look.
+
+First: who is the app actually running as? `ps -o user= -C myapp`, or check the `User=` directive in its systemd unit. Half of these cases are 'I assumed it runs as myapp but it runs as nobody.'
+
+Second: trace the full path with `namei -l /var/log/myapp`. This shows permissions at *every* level — a missing execute bit on `/var` or `/var/log` blocks everything below it, and this is the single most common root cause.
+
+Third: check the target itself — `ls -ld /var/log/myapp`. Is the app user the owner? In the group? (`id appuser` to confirm group membership — and remember, group changes need a re-login or service restart to take effect.)
+
+Fourth: extended checks. `getfacl` for ACLs that might be denying. `lsattr` for immutable flags. `findmnt` / `mount | grep` — is the filesystem mounted read-only? Is it full — `df -h` *and* `df -i`?
+
+Fifth: the security layer. On RHEL-family systems, SELinux contexts — `ls -Z`, denials in the audit log. On Ubuntu, AppArmor profiles. I've seen perfectly correct Unix permissions blocked by SELinux more than once, and the fix is a context label or boolean, not a chmod.
+
+And the fix is always the *minimal* correct one: chown to the service user, or a group + SGID, or an ACL entry. Never 777 — if I see that in a postmortem, that's a second finding."
+
+```bash
+ps -o user=,group= -C myapp
+namei -l /var/log/myapp
+ls -ld /var/log/myapp && getfacl /var/log/myapp && lsattr -d /var/log/myapp
+findmnt -T /var/log/myapp
+df -h /var/log && df -i /var/log
+# SELinux (RHEL): 
+getenforce; ausearch -m avc -ts recent | grep myapp
+```
+
+**Key Point:** "Triage outside-in: process user → every path level with `namei -l` → ownership → ACLs/attributes → mounts → SELinux. Fix with the minimal correct change, never 777."
+
+---
+
+*Continue practicing with the [hands-on lab](labs/02-filesystem-permissions-lab.md) and the [cheat sheet](cheat-sheets/02-filesystem-permissions-cheatsheet.md) for this topic.*
