@@ -120,3 +120,143 @@ The core idea is *units*: declarative files describing services, sockets, timers
 Why it matters for DevOps: systemd gives you process supervision, structured logging via journald, resource limits via cgroups, and socket activation — all without extra tooling. It's the reason 'just run it as a service' is a complete answer now."
 
 **Key Point:** "systemd replaced fragile SysV init scripts with declarative units plus supervision, logging, and cgroups built in. `systemctl` is how you drive all of it."
+
+### Q8: A service is down. Walk me through your exact systemctl flow.
+
+**How to Answer:**
+
+"First `systemctl status myapp` — it shows active/inactive, recent log lines, the main PID, and whether it's enabled, all in one screen. If it's failed, I check the exit code and then `journalctl -u myapp -n 50 --no-pager` for the actual error.
+
+Then the verbs: `start`, `stop`, `restart`, `reload` — and I use `reload` over `restart` when the app supports it, because reload keeps the process alive and just re-reads config. `enable`/`disable` control boot-time startup, `is-enabled` verifies it.
+
+The classic trap: editing the unit file and forgetting `systemctl daemon-reload`. systemd caches unit files — your change does literally nothing until you reload the daemon."
+
+```bash
+systemctl status myapp && journalctl -u myapp -n 50 --no-pager
+```
+
+**Key Point:** "`status` then `journalctl -u` is the debugging loop. And after any unit edit: `daemon-reload`, or your change silently does nothing."
+
+---
+
+## Writing Your Own Unit Files
+
+### Q9: Write a systemd unit file for a Node.js app. What are the directives that actually matter?
+
+**How to Answer:**
+
+"A unit file lives in `/etc/systemd/system/myapp.service` and has three sections. `[Unit]` holds `Description` and `After=network.target` so it starts after networking. `[Service]` is the meat: `ExecStart` with the full absolute path, `Restart=always`, `User=` so it never runs as root, `WorkingDirectory`, and `EnvironmentFile` for secrets.
+
+`[Install]` with `WantedBy=multi-user.target` is what `systemctl enable` hooks into. Then `daemon-reload`, `enable --now`, and you're done.
+
+Interviewers check two things here: that you never run app processes as root, and that you know `Type=simple` (the default, process stays foreground) vs `Type=forking` (old daemons that background themselves). For anything modern, simple."
+
+```ini
+[Unit]
+Description=My Node.js API
+After=network.target
+
+[Service]
+User=appuser
+WorkingDirectory=/opt/myapp
+ExecStart=/usr/bin/node /opt/myapp/server.js
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/myapp/env
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Key Point:** "Unit, Service, Install. Full paths in ExecStart, a non-root User, Restart=always — that's 90% of a production unit file."
+
+### Q10: `Restart=always` sounds great. When does it bite you?
+
+**How to Answer:**
+
+"It bites when the app fails fast and loops — crash, restart, crash, restart, hammering the CPU and flooding logs. systemd has `StartLimitIntervalSec` and `StartLimitBurst` to cap that, but people don't set them.
+
+The subtler trap: `Restart=always` restarts even on a clean exit. If your app exits 0 because its config is wrong and there's nothing to do, systemd keeps resurrecting a broken service. `Restart=on-failure` is usually what you actually want — restart on crashes, not on clean exits.
+
+And `RestartSec` matters more than people think. Zero delay on a service that needs a database means it burns through its restart budget before the DB is even up. Five seconds of patience fixes a whole class of boot-order flakiness."
+
+**Key Point:** "`always` restarts even clean exits — `on-failure` is usually right. Set `RestartSec` and start-limit guards, or a crashing service becomes a restart storm."
+
+---
+
+## systemd in Production: Timers, Journal, Resource Limits
+
+### Q11: systemd timers vs cron — which do you pick and why?
+
+**How to Answer:**
+
+"Timers win on any systemd box and it's not close. A timer unit gives you logging in the journal per run, dependency ordering with `After=`, calendar or monotonic scheduling, and `Persistent=true` so missed runs fire on boot — cron does none of that.
+
+The killer feature for me is observability: `systemctl list-timers` shows every timer, when it last ran, and when it runs next. With cron I'm grepping `/var/log/syslog` hoping the job logged something.
+
+I still use cron for user-level quick hacks on my laptop. On servers, timers — because when a 3 AM job fails, I want `journalctl -u backup-job` to tell me why, not silence."
+
+**Key Point:** "Timers give you logging, dependencies, and missed-run catch-up — everything cron lacks. `systemctl list-timers` alone is worth the switch."
+
+### Q12: How do you debug a service that fails on boot but works when you start it manually?
+
+**How to Answer:**
+
+"That pattern screams ordering or environment problem. `journalctl -u myapp -b` shows this boot's logs only — I look for what wasn't ready yet: database unreachable, DNS not up, a mount missing.
+
+The usual suspects: the unit is missing `After=network-online.target` (not just `network.target`, which only means the stack started), or it depends on an env var that's set in my shell but not in the unit's `Environment`. Systemd services get a minimal environment — no `~/.bashrc`, no exported vars.
+
+My fix flow: add the right `After=` and `Wants=`, put env in `EnvironmentFile`, then `daemon-reload` and reboot-test. If it survives a reboot, it's fixed — testing with manual `systemctl start` proves nothing about boot."
+
+**Key Point:** "Fails on boot but not manually = ordering or environment. `journalctl -u myapp -b`, fix `After=` and `EnvironmentFile`, then prove it with a real reboot."
+
+### Q13: How do you cap a service's CPU and memory with systemd?
+
+**How to Answer:**
+
+"systemd sits on top of cgroups, so resource limits are just unit directives. `MemoryMax=1G` hard-caps RAM — the kernel OOM-kills the service's processes past it. `CPUQuota=50%` limits it to half a core. No sidecar tooling needed.
+
+I set these on everything in production, because one runaway worker shouldn't take the box down with it. The app gets killed, systemd restarts it per the restart policy, and I get paged — that's a controlled failure instead of a 3 AM full outage.
+
+One nuance: `MemoryMax` is a hard wall, `MemoryHigh` throttles first. For most services I set both — throttle as a warning zone, hard cap as the wall. And these same knobs are what Kubernetes requests/limits translate to under the hood."
+
+```ini
+[Service]
+MemoryMax=1G
+MemoryHigh=800M
+CPUQuota=50%
+```
+
+**Key Point:** "`MemoryMax` and `CPUQuota` in the unit file cap a service via cgroups. One runaway process gets killed and restarted — it doesn't take the whole box down."
+
+---
+
+## Troubleshooting: Zombies, OOM, and Runaway Processes
+
+### Q14: What are zombie processes? Should I panic when I see them?
+
+**How to Answer:**
+
+"A zombie is a dead process whose parent hasn't called `wait()` to collect its exit status yet. It's not running, not using CPU or memory — just an entry in the process table holding the exit code. The `Z` in `ps` STAT.
+
+A couple of zombies are harmless — parents reap them eventually. Hundreds of them mean the parent is broken or stuck and never reaping, which can eventually exhaust the PID table. You can't kill a zombie because it's already dead; you fix or restart the *parent*.
+
+The container angle is the real interview point: if your app is PID 1 and spawns children without reaping them, zombies accumulate forever. That's the `--init` / `tini` conversation again — PID 1 has reaping duties."
+
+**Key Point:** "Zombies are dead processes awaiting reaping — harmless in small numbers, a broken-parent symptom in large ones. Kill the parent, not the zombie. In containers, that's why PID 1 must reap."
+
+### Q15: The OOM killer fired in production. What happened, and what do you do?
+
+**How to Answer:**
+
+"When the box runs out of memory, the kernel's OOM killer picks a victim — usually the biggest RSS scorer — and kills it to save the system. `dmesg | grep -i oom` shows you exactly what died and why, with the memory score.
+
+First response: confirm it was OOM and not a crash — the dmesg line is unambiguous. Then figure out if it was a leak or a spike: `journalctl` memory graphs, or the app's metrics if you have them. A slow climb is a leak; a sudden spike is usually a bad deploy or a traffic surge.
+
+The fix depends on the cause. Leaks get fixed in code. Spikes get guardrails: `MemoryMax` on the unit so the service dies alone instead of the kernel picking victims at random, and proper sizing so the box has headroom. Random OOM kills are a capacity-planning failure, not bad luck."
+
+**Key Point:** "`dmesg` proves it was OOM. Leaks get fixed, spikes get `MemoryMax` guardrails. The kernel picking random victims means you under-provisioned — plan capacity instead."
+
+---
+
+*End of guide — practice saying these out loud until they sound like you.*
