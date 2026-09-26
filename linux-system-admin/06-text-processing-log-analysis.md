@@ -129,3 +129,117 @@ sed -n '/2026-09-26 21:1[0-5]/p' app.log   # everything from 21:10 to 21:15
 ```
 
 **Key Point:** "`sed -n 'START,ENDp'` carves out a line or pattern range — use `-n` or the whole file prints too."
+
+---
+
+## Awk Field Processing
+
+### Q7: What is awk actually for? Why not just use grep and cut?
+
+**How to Answer:**
+
+"Awk is for columns and conditions together. Grep filters lines, cut picks columns, but awk does both — plus math, plus pattern matching per field.
+
+`awk '$9 >= 500 {print $7, $9}' access.log` gives me every URL that returned a 5xx. One pass, no pipeline gymnastics. That's the whole pitch.
+
+It auto-splits on whitespace into `$1, $2, ...` with `$0` as the full line. `-F','` switches the delimiter for CSVs. For nginx logs I reach for awk before anything else."
+
+```bash
+awk '$9 >= 500 {print $7, $9, $1}' /var/log/nginx/access.log | sort | uniq -c | sort -rn | head
+```
+
+**Key Point:** "Awk filters and extracts columns in one pass — `awk '$9 >= 500 {print $7}'` is my default nginx-log query."
+
+---
+
+### Q8: Explain `BEGIN`, `END`, and `NR` in awk with a real example.
+
+**How to Answer:**
+
+"`BEGIN` runs before any input — I use it to print headers or set the field separator. `END` runs after the last line — that's where totals and averages go.
+
+`NR` is the running line count, `FNR` resets per file. They're different when you process multiple files, which trips people up in interviews.
+
+My bread-and-butter: `awk '{sum+=$NF} END {print sum/NR}'` averages the last column. Five-minute latency stats without leaving the terminal."
+
+```bash
+awk -F'"' '{split($3,a," "); s[a[2]]++} END {for (c in s) print s[c], c}' access.log
+```
+
+**Key Point:** "`BEGIN` sets up, `END` reports, `NR` counts — combine them for one-liner summaries like averages and histograms."
+
+---
+
+## Journalctl and System Logs
+
+### Q9: Where do systemd service logs go, and how do you query them?
+
+**How to Answer:**
+
+"Into the journal, managed by systemd-journald. `journalctl -u nginx.service` shows just that unit's logs — no more hunting through /var/log for the right file.
+
+`-f` follows live like tail, `--since "1 hour ago"` bounds the window, and `-p err` filters by priority. `journalctl -u app -p err --since today` is my incident-opening move.
+
+Logs persist across reboots only if `Storage=persistent` is set in journald.conf — otherwise /run/log/journal is wiped on reboot. I've been burned by that on ephemeral boxes."
+
+```bash
+journalctl -u myapp.service -p err --since "30 min ago" --no-pager
+```
+
+**Key Point:** "`journalctl -u <service>` for unit logs, `--since` and `-p` to bound them — and check journald persistence on ephemeral hosts."
+
+---
+
+### Q10: How do you correlate an application error with what the system was doing at that time?
+
+**How to Answer:**
+
+"I pull both timelines into one view. `journalctl --since` around the error timestamp for the app unit, plus `journalctl -k` for kernel events — OOM kills show up there, not in app logs.
+
+`dmesg -T` gives human timestamps for the same kernel ring buffer. An OOMKilled container almost always leaves its fingerprint in dmesg first.
+
+My mental checklist: app logs for the exception, journal for the unit restarts, dmesg for OOM or disk errors, and `ss` output if it smells like connections. The error is the last domino — I look for the first one."
+
+```bash
+journalctl -k --since "21:00" | grep -i "oom\|killed process"   # was memory the killer?
+```
+
+**Key Point:** "App logs show the exception, `journalctl -k` and `dmesg -T` show the cause — correlate by timestamp, don't trust one source."
+
+---
+
+## Log Analysis Pipelines
+
+### Q11: Build me a one-liner that finds the top 10 slowest requests in an nginx log.
+
+**How to Answer:**
+
+"This assumes the log format includes request time as the last field — I configure `%D` in log_format for exactly this reason.
+
+`awk '{print $NF, $7}'` pulls time and URL, `sort -rn` orders slowest first, `head` takes ten. Then I eyeball whether it's one bad endpoint or everything.
+
+Variations: swap `$NF` for a percentile with a second awk pass, or group by endpoint first and average. Interviewers love asking me to extend it on the fly."
+
+```bash
+awk '{print $NF, $7}' /var/log/nginx/access.log | sort -rn | head -10
+```
+
+**Key Point:** "Awk extracts the fields, sort ranks them, head takes the top N — build every log one-liner from that skeleton."
+
+---
+
+### Q12: How do you tail logs across multiple services or pods at once during an incident?
+
+**How to Answer:**
+
+"On a VM: `journalctl -f -u api -u worker -u db` follows all three units in one interleaved stream. Add `-o short-precise` if I need microsecond timestamps to order events.
+
+On Kubernetes: `kubectl logs -f -l app=myapp --all-containers` follows every pod behind a label. `--since=10m` keeps it from dumping ancient history. Stern or k9s if I need fancier multiplexing.
+
+For permanent setups I ship everything to one place — Loki or ELK — because SSH-ing into twelve boxes during an outage is how incidents get longer."
+
+```bash
+kubectl logs -f -l app=payments --all-containers --since=15m --prefix=true
+```
+
+**Key Point:** "Multiplex with `journalctl -f -u a -u b` or `kubectl logs -l app=x --all-containers` — and centralize logs so you stop doing this per-box."
