@@ -147,3 +147,90 @@ And the subtlest one: it delays integration feedback. A feature merged to develo
 **Key Point:** "Long release branches create merge hell, confuse everyone about merge targets, and delay real production feedback."
 
 ---
+
+## GitHub Flow and Release Branches
+
+### Q9: What is GitHub Flow, and how does it differ from GitFlow?
+
+**How to Answer:**
+
+"GitHub Flow is GitFlow's simpler sibling. One long-lived branch — main — and everything else is a short-lived feature branch off main, merged back via pull request.
+
+There's no develop branch, no release branch ceremony. Main is always deployable, and you deploy straight from it after the PR merges. Tags mark releases.
+
+The difference from GitFlow is basically philosophy: GitHub Flow assumes you deploy continuously, so there's no 'release' to prepare. GitFlow assumes releases are events, so it builds branches around them."
+
+**Key Point:** "GitHub Flow: main plus short feature branches, PR review, deploy from main — built for continuous deployment, not release events."
+
+---
+
+### Q10: How do release branches work for teams that do need versions?
+
+**How to Answer:**
+
+"When you ship versions — SDKs, on-prem software, mobile apps — you branch off main at the release point, like `release/2.4`. That branch freezes the version while main keeps moving.
+
+Bug fixes for that version go onto the release branch and get cherry-picked or merged where needed. You tag the actual release from it, like `v2.4.0`.
+
+The rule I enforce: release branches are for stabilization and fixes only. The moment someone sneaks a feature into a release branch, you've lost the point of having it."
+
+```bash
+git checkout -b release/2.4 main
+git tag -a v2.4.0 -m "Release 2.4.0"
+git push origin release/2.4 v2.4.0
+```
+
+**Key Point:** "Release branches freeze a version for stabilization while main moves on — fixes only, never new features."
+
+---
+
+### Q11: How do hotfixes differ between trunk-based and GitFlow teams?
+
+**How to Answer:**
+
+"In trunk-based, a hotfix is just another tiny branch off main — you fix, review fast, merge, deploy. The whole cycle is minutes because main is already deployable.
+
+In GitFlow, you branch off main, fix, then merge into both main and develop. That double merge exists so the fix lands in the current release and doesn't get lost in the next one.
+
+The GitFlow mistake I watch for is forgetting the develop merge. Skip it and the same bug ships again in the next release, which is embarrassing in a way I know firsthand."
+
+**Key Point:** "Trunk-based hotfix: branch off main, merge, deploy — done. GitFlow hotfix: merge into main AND develop so the fix survives."
+
+---
+
+## Pull Requests and Merging
+
+### Q12: What makes a pull request actually reviewable?
+
+**How to Answer:**
+
+"Small. That's ninety percent of it. A PR under 200 lines gets a real review; a 2,000-line PR gets a rubber stamp. I break work into stacked or sequential small PRs instead of one mega-PR.
+
+The description should say what changed and why — not what the code says, but the reasoning a reviewer can't see in the diff. Link the ticket, mention the risky parts.
+
+And I keep the branch short-lived. A PR open for three weeks has merge conflicts, stale reviews, and a reviewer who has to re-learn the context. Old branches are where quality goes to die."
+
+**Key Point:** "Small diffs, explain the why in the description, and merge fast — old branches get rubber-stamp reviews."
+
+---
+
+### Q13: Merge commit, squash merge, or rebase merge — when do you use each?
+
+**How to Answer:**
+
+"For feature branches into main, I default to squash merge. It turns a messy 15-commit branch into one clean commit on main with a proper message. Main's history reads like a changelog.
+
+I use regular merge commits when the branch history itself is valuable — release branches, long-lived integration work — because squash would destroy information.
+
+Rebase-and-merge gives a linear history but rewrites commits, so I only use it on branches nobody else has pulled. Rewriting shared history is how you ruin someone's morning."
+
+```bash
+git checkout main && git merge feature/x     # merge commit: preserves history
+git merge --squash feature/x && git commit   # squash: one clean commit
+```
+
+**Key Point:** "Squash for features (clean changelog), merge commits when history matters, never rewrite history others have pulled."
+
+---
+
+*Day 8 of 58 — next: Git internals (blobs, trees, commits, refs).*
