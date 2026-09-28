@@ -9,7 +9,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | # | Subject | Guides |
 |---|---------|--------|
 | 1 | [Linux & System Administration](linux-system-admin/) | 6/6 |
-| 2 | [Git & Version Control](version-control/) | 2/4 |
+| 2 | [Git & Version Control](version-control/) | 3/4 |
 | 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | ⬜ |
 | 4 | [Containers (Docker)](containers/) | ⬜ |
 | 5 | [Kubernetes](kubernetes/) | ⬜ |
@@ -33,6 +33,7 @@ A new guide lands here every day. Progress so far:
 - [x] 06 — [Text Processing & Log Analysis](linux-system-admin/06-text-processing-log-analysis.md) (+ [hands-on lab](linux-system-admin/labs/06-text-processing-log-analysis-lab.md), [cheat sheet](linux-system-admin/cheat-sheets/06-text-processing-log-analysis-cheatsheet.md))
 - [x] 07 — [Git Fundamentals & Daily Workflow](version-control/07-git-fundamentals-daily-workflow.md) (+ [hands-on lab](version-control/labs/07-git-fundamentals-lab.md), [cheat sheet](version-control/cheat-sheets/07-git-fundamentals-cheatsheet.md))
 - [x] 08 — [Branching Strategies](version-control/08-git-branching-strategies.md) (+ [hands-on lab](version-control/labs/08-git-branching-strategies-lab.md), [cheat sheet](version-control/cheat-sheets/08-git-branching-strategies-cheatsheet.md))
+- [x] 09 — [Git Internals](version-control/09-git-internals.md) (+ [hands-on lab](version-control/labs/09-git-internals-lab.md), [cheat sheet](version-control/cheat-sheets/09-git-internals-cheatsheet.md))
 
 ---
 
