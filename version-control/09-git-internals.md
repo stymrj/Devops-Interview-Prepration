@@ -4,7 +4,6 @@
 
 **Note for Students:** This guide is written exactly how you should answer in interviews. Practice reading these answers out loud to make them natural when speaking.
 
----
 
 ## Table of Contents
 
@@ -114,3 +113,113 @@ This is why checking out any commit is instant and why `git blame` walks parent 
 **Key Point:** "Git stores snapshots, not diffs — diffs are computed on demand, and packfile compression is just a storage optimization."
 
 ---
+## Commits and Tags
+
+### Q7: What's actually inside a commit object? Which parts can you see with plumbing commands?
+
+**How to Answer:**
+
+"A commit holds the tree hash, parent commit hashes, author name/email/date, committer name/email/date, and the message. That's it — no branch name, no filename list. The branch is just a ref pointing at the commit.
+
+I like to demo this with `git cat-file -p HEAD` — it prints the raw object and the mystery disappears. Interviewers love when you can show, not just tell.
+
+The author vs committer split trips people up. They're usually the same person, but when you rebase or cherry-pick, Git keeps the original author and sets you as the committer. That distinction is how `git log` knows who originally wrote the change."
+
+```bash
+$ git cat-file -p HEAD
+tree 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b
+parent a615b0bd956ffa1715f523a49751b9cdc8c42f89
+author Satyam Raj <satyam@example.com> 1787954400 +0530
+committer Satyam Raj <satyam@example.com> 1787954400 +0530
+
+Add Git Internals interview guide (part 1)
+```
+
+**Key Point:** "A commit is tree + parents + author/committer + message — no branch name lives in it, and `git cat-file -p` shows you the raw truth."
+
+---
+
+### Q8: At the object level, what's the difference between an annotated tag and a lightweight tag?
+
+**How to Answer:**
+
+"A lightweight tag is not an object at all — it's just a ref, a file in `.git/refs/tags/` containing a commit hash. Zero metadata. An annotated tag is a real tag object with a tagger, date, message, and GPG signature capability, pointing at a commit.
+
+That's why `git describe` and release workflows want annotated tags: they carry who cut the release and when. Lightweight tags are fine as personal bookmarks, but they tell CI nothing.
+
+Quick tell in an interview: `git cat-file -t v1.2.0` prints `tag` for annotated and `commit` for lightweight. It's a one-command answer that shows you actually know."
+
+**Key Point:** "Lightweight tags are just refs with no metadata; annotated tags are real objects with tagger, date, and message — use annotated for releases."
+
+---
+
+## Refs Branches and HEAD
+
+### Q9: What is a ref, really? How is a branch different from a tag under the hood?
+
+**How to Answer:**
+
+"A ref is a pointer: a name mapped to an object hash, stored as a tiny file like `.git/refs/heads/main` containing one SHA. A branch is a ref that moves — every commit on that branch updates it. A tag is a ref that's meant to stay put.
+
+That's genuinely all a branch is. There's no branch object, no branch metadata. `git branch feature` just writes a 40-char file. Deleting a branch with `-d` deletes the pointer, not the commits — which is why recovery is possible.
+
+HEAD is the special ref that says 'where I am' — usually it points at a branch ref (`ref: refs/heads/main`), and that's what makes a branch 'checked out.' Follow that chain and the whole model clicks."
+
+**Key Point:** "A branch is a movable pointer to a commit, a tag is a fixed pointer, HEAD is the pointer to your current pointer — it's pointers all the way down."
+
+---
+
+### Q10: What does "detached HEAD" mean, and when is it actually useful?
+
+**How to Answer:**
+
+"Detached HEAD means HEAD points directly at a commit hash instead of at a branch ref. You're on no branch — new commits you make here have no branch pointing at them, so they're easy to lose.
+
+It happens when you check out a tag, a specific SHA, or a remote branch directly. Git warns you because commits made in this state are only reachable from the reflog.
+
+But it's not always a mistake. CI systems build in detached HEAD all the time — they check out the exact commit they want and never commit anything. Bisecting also uses it: jump between commits, test, no branch needed. The rule is simple: detached HEAD is fine for reading history, dangerous for writing it."
+
+**Key Point:** "Detached HEAD = HEAD points at a commit, not a branch. Safe for inspecting and bisecting, risky for committing — new work there has no branch to hold it."
+
+---
+
+## The Object Database in Practice
+
+### Q11: Where do objects live on disk — loose objects vs packfiles?
+
+**How to Answer:**
+
+"Fresh objects start as loose files: `.git/objects/ab/cd...` where the first two hash chars are the directory. Each is zlib-compressed. Simple, but thousands of tiny files get slow, so Git periodically packs them.
+
+Packfiles bundle many objects into one file with delta compression against similar objects, plus an index for random access. `git gc` triggers this, and clones/fetches transfer packfiles directly — that's why clone is fast.
+
+So the snapshot model I described earlier stays true logically, but physically Git is smart: deltas exist, but only as a packing optimization the model never sees. If an interviewer says 'Git stores diffs,' this is the nuance that corrects them."
+
+```bash
+$ ls .git/objects/ab/          # loose objects: first 2 hash chars as dir
+$ ls .git/objects/pack/        # pack-*.pack + pack-*.idx
+$ git count-objects -v          # see loose vs packed counts
+```
+
+**Key Point:** "New objects are loose zlib files; `git gc` packs them with delta compression — the snapshot model stays true, packing is just physical optimization."
+
+---
+
+### Q12: You deleted a branch but remember the commit SHA. How do you get it back?
+
+**How to Answer:**
+
+"Deleting a branch only deleted the pointer — the commit objects are still in the database until `git gc` prunes them, which by default takes weeks. So recovery is usually trivial.
+
+If I have the SHA, I just create a new branch pointing at it: `git branch recovery <sha>`. Done. If I've lost the SHA, `git reflog` shows where HEAD has been — every checkout, commit, and reset — and the hash is right there.
+
+The deeper answer interviewers want: objects are only deleted when nothing references them AND they're older than the gc grace period. Branch deletion removes one reference, but the reflog keeps another for 90 days by default. That's your safety net."
+
+```bash
+$ git reflog                       # find the lost commit's SHA
+$ git branch recovery a615b0bd      # re-point a branch at it
+$ git fsck --lost-found             # last resort: find dangling commits
+```
+
+**Key Point:** "Deleting a branch deletes the pointer, not the objects — `git branch recovery <sha>` or the reflog brings it back, and gc won't touch it for weeks."
+
