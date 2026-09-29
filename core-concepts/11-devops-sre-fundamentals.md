@@ -104,3 +104,98 @@ They share the same goals — ship fast, stay reliable, automate everything. The
 In an interview I'd add that they're not competing choices. Plenty of teams do DevOps culture with SRE practices mixed in — error budgets and blameless postmortems work fine even if nobody has 'SRE' in their title."
 
 **Key Point:** "DevOps is the philosophy of shared ownership; SRE is a prescriptive implementation of it — error budgets, SLIs, and toil limits. They complement, not compete."
+
+---
+
+## Toil and Automation
+
+### Q7: What is toil? Give me a real example.
+
+**How to Answer:**
+
+"Toil is the repetitive, manual, automatable operational work that scales with the system but creates no lasting value — and Google's SRE book gives it a strict test. It's toil only if it's manual, repetitive, automatable, tactical rather than strategic, and grows as the service grows.
+
+My real example: every Monday someone on my team manually rotated log files on eight app servers — SSH in, check disk, gzip old logs, delete ancient ones. Pure toil: manual, weekly, scriptable, and it got worse every time we added a server.
+
+The fix took one afternoon: a logrotate config plus a disk-usage alert. That's the SRE move — toil eliminated permanently beats toil done faster. If you just get quicker at manual work, you've optimized the wrong thing."
+
+**Key Point:** "Toil is manual, repetitive, automatable ops work that scales with the system — the SRE answer is to eliminate it with automation, not get faster at it."
+
+---
+
+### Q8: Why does SRE cap operational work at 50%? What happens past that?
+
+**How to Answer:**
+
+"Google's rule is that an SRE should spend at most half their time on ops work — tickets, pages, manual fixes — and at least half on engineering: automation, tooling, reliability improvements. It's a forcing function.
+
+Past 50%, the team is drowning in toil and has no time left to automate their way out, so the toil keeps growing. It's a death spiral: more manual work, less automation, even more manual work next quarter.
+
+The enforcement mechanism is real too: if a service needs more than 50% ops time, SRE hands operational load back to the product team until reliability improves. That creates the right incentive — product teams feel the pain of unreliability directly, so they invest in fixing it."
+
+**Key Point:** "The 50% cap forces engineering time for automation — past it, toil compounds and the team can't automate its way out, so excess load goes back to the product team."
+
+---
+
+## Change Without Fear
+
+### Q9: Why do DevOps teams deploy in small batches?
+
+**How to Answer:**
+
+"Small batches fail small. A deploy with three changes that breaks prod is a ten-minute rollback and an obvious culprit. A deploy with three hundred changes that breaks prod is a war room and a guessing game.
+
+Small batches also ship faster overall, which sounds backwards but isn't. Big releases sit in branches for weeks, merge into conflicts, and need risky big-bang deploys. Small changes flow through the pipeline daily with almost no ceremony.
+
+And there's a human factor: when deploys are boring and frequent, nobody fears them. When deploys are rare and huge, everyone fears them — which makes them rarer and huger. Small batches break that cycle."
+
+**Key Point:** "Small batches fail small, roll back fast, and make deploys boring — big-bang releases do the opposite on all three."
+
+---
+
+### Q10: How does SRE think about risk? Is the goal zero incidents?
+
+**How to Answer:**
+
+"No — the goal is explicitly not zero incidents, because 100% reliability is the wrong target. It's infinitely expensive and it freezes all change. SRE asks instead: how much unreliability can we afford, and spends that budget on shipping features.
+
+That's the error budget idea in one line: if your SLO is 99.9%, you get about 43 minutes of downtime a month to 'spend' on deploys, experiments, and the occasional incident. Budget remaining means ship fast; budget burned means freeze changes and invest in reliability.
+
+This reframes the dev-versus-ops fight completely. It's no longer 'move fast' versus 'don't break things' — it's a shared, numeric agreement both sides can see. Risk becomes a budget you manage, not a fear you obey."
+
+**Key Point:** "SRE doesn't chase zero incidents — it budgets acceptable unreliability with error budgets, so teams ship fast while the budget lasts and harden when it's spent."
+
+---
+
+## Proving It Works
+
+### Q11: How do you measure whether DevOps is actually working?
+
+**How to Answer:**
+
+"I use the four DORA metrics because they're research-backed, not vanity. Deployment frequency and lead time for changes measure speed; change failure rate and mean time to recovery measure stability. Elite teams ship multiple times a day and recover in under an hour.
+
+The key insight from the DORA research is that speed and stability move together — they don't trade off. Teams that deploy often have lower failure rates, because small changes are safer. If someone claims 'we go slow to be safe,' the data says they're wrong on both counts.
+
+Practically, I pull deployment frequency straight from git history, and MTTR from incident timestamps. You don't need fancy tooling to start — a spreadsheet and honest timestamps beat a dashboard nobody looks at."
+
+```bash
+$ git log --since="30 days ago" --oneline --grep="deploy" | wc -l
+27
+```
+
+**Key Point:** "Measure with DORA's four — deployment frequency, lead time, change failure rate, MTTR — and remember the research: speed and stability improve together."
+
+---
+
+### Q12: You join a team with zero DevOps practices. Where do you start?
+
+**How to Answer:**
+
+"I start with visibility before automation — you can't improve what you can't see. First week: get the app building and deploying from a script anyone can run, add basic health checks, and set up one dashboard showing the four DORA-ish numbers, even roughly.
+
+Then I pick the single most painful manual thing and automate it. Not a grand pipeline redesign — one toil task, killed permanently. That builds trust, and trust buys permission for bigger changes.
+
+What I deliberately don't do: arrive with a Kubernetes migration plan on day one. Tool-first transformations fail because the team hasn't felt the pain the tool solves yet. Small wins, measured impact, then bigger bets — in that order."
+
+**Key Point:** "Start with visibility — reproducible deploys, health checks, basic metrics — then kill the most painful toil first. Small measured wins earn permission for bigger changes."
