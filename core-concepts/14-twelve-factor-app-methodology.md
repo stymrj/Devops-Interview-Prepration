@@ -142,3 +142,122 @@ Immutability also makes rollbacks trivial. Release 42 is broken? Run release 41 
 Kubernetes nails this: a Deployment's pod template hash identifies the release, and rolling back is just pointing at the previous ReplicaSet. The factor is eleven years older than Kubernetes, but the mechanism is exactly what it describes."
 
 **Key Point:** "Immutable releases mean what you tested is what you shipped — and rollbacks become trivial because the previous release still exists, unchanged, ready to run again."
+---
+
+## Processes State and Concurrency
+
+### Q9: Why must processes be stateless and share-nothing? What's the real trap?
+
+**How to Answer:**
+
+"Because stateful processes can't be scaled or restarted safely. If your app stores sessions in memory or writes uploads to local disk, killing a container loses data — and you can't run two copies behind a load balancer because requests land on different instances.
+
+Share-nothing means any state the app needs lives in a backing service — the database, Redis, object storage — never in the process. The process itself is disposable. You can kill it, move it, scale it to fifty copies, and nothing is lost.
+
+The classic interview trap is sticky sessions. 'Just route the user back to the same server' is the answer that fails factor six. Sticky sessions make your load balancer stateful, break rolling deploys, and turn every scale-down into lost sessions. Store the session in Redis and let any instance serve any request."
+
+**Key Point:** "Stateless, share-nothing processes let you kill, move, or scale instances freely — state lives in backing services like Redis or S3, never in the process, and sticky sessions are the trap to name."
+
+---
+
+### Q10: What does it mean for an app to be self-contained and bind its own port?
+
+**How to Answer:**
+
+"Factor seven says the app should export HTTP as a service by binding to a port itself — not depend on a web server being injected at runtime. Your app listens on, say, 8080, and that's its contract with the world.
+
+The old model was dropping a WAR file into Tomcat and letting the container serve it. The app couldn't run standalone, couldn't be tested without the container, and the port it lived on was someone else's decision. Self-contained apps flip that: the app owns its runtime and its port.
+
+This is why every modern service exposes a PORT env var and every platform — Heroku, Kubernetes, Cloud Run — routes to it. In Kubernetes your container binds 8080, the Service maps it, the Ingress routes to it. The factor is the reason 'what port does it listen on' is a deploy-time question, not a code question."
+
+```bash
+# the app binds its own port, taken from config
+PORT=${PORT:-8080}
+./myapp --port "$PORT"
+```
+
+**Key Point:** "The app binds its own port and serves HTTP standalone — no runtime injection — so the platform just routes to it, which is exactly the Kubernetes Service model."
+
+---
+
+### Q11: How does the process model handle concurrency, and why not threads?
+
+**How to Answer:**
+
+"The factor says scale out with the process model: run more instances of the same process rather than bigger instances. Need more web capacity? Run ten web processes. Need more background workers? Run five worker processes. Each is an independent, disposable unit.
+
+This maps one-to-one onto Kubernetes — your Deployment replicas ARE the process model. Horizontal scaling is adding processes; the scheduler handles placement. It's also why the factor wants one process type per concern: the web process and the worker process scale independently.
+
+Threads aren't forbidden — use them inside a process if you want — but they're not the scaling mechanism. The scaling unit is the process, because processes are what the platform can start, stop, move, and count. Threads die with the process; processes get orchestrated."
+
+**Key Point:** "Concurrency means scaling by adding processes — one process type per concern, each independently scalable — which is exactly what Kubernetes replicas implement."
+
+---
+
+## Port Binding Disposability and Dev Prod Parity
+
+### Q12: What does disposability actually require from your code?
+
+**How to Answer:**
+
+"Disposability has two halves: fast startup and graceful shutdown. Fast startup means the app is ready to serve in seconds, not minutes — no thirty-minute warmup that makes autoscaling useless. Graceful shutdown means on SIGTERM the app stops accepting new work, finishes what's in flight, and exits cleanly.
+
+This is where code has to cooperate. You need signal handlers that drain connections, flush buffers, and release locks. A process that ignores SIGTERM and gets SIGKILLed nine seconds later is the number one cause of dropped requests during deploys — I've seen it turn a clean rollout into a user-facing outage.
+
+In Kubernetes this is terminationGracePeriodSeconds plus your handler. The platform sends SIGTERM, waits, then kills. If your app shuts down gracefully inside that window, rolling updates are invisible to users. That's the whole factor in one deploy."
+
+```python
+# graceful shutdown: finish in-flight work on SIGTERM, then exit
+import signal, sys
+def handle_term(signum, frame):
+    stop_accepting_new_requests()
+    drain_in_flight(timeout=25)
+    sys.exit(0)
+signal.signal(signal.SIGTERM, handle_term)
+```
+
+**Key Point:** "Disposability means seconds-to-start and graceful SIGTERM handling that drains in-flight work — it's what makes rolling updates and autoscaling invisible to users."
+
+---
+
+### Q13: Why keep dev/prod parity, and what's the realistic version of it?
+
+**How to Answer:**
+
+"The factor wants small gaps between development and production in three dimensions: the time gap — how long code sits undeployed; the personnel gap — who deploys; and the tools gap — the stack underneath. Big gaps mean 'it worked in dev' surprises in prod.
+
+The realistic version isn't running prod infrastructure on your laptop. It's using the same backing services — Postgres in dev if prod is Postgres, not SQLite — the same base images, and deploying to a staging environment that mirrors prod closely. Containers made the tools gap nearly free to close.
+
+The time gap is the one teams neglect most. Code that deploys to prod within hours of being written gets its surprises early, when they're cheap. Code that sits for three weeks then deploys gets its surprises at 2 AM. Continuous deployment is this factor's time-gap answer."
+
+**Key Point:** "Keep dev/prod gaps small across time, people, and tooling — same databases, same images, deploy within hours — because 'worked in dev' surprises are the most expensive kind."
+
+---
+
+### Q14: Logs as event streams and admin processes — why do these matter?
+
+**How to Answer:**
+
+"Factor eleven says a 12-factor app never writes log files or manages its own log rotation. It writes events to stdout as an unbuffered stream, and the platform captures, aggregates, and routes them. The app doesn't know or care where logs go.
+
+This matters because in a world of fifty disposable containers, log files are write-only memory — they die with the container. Stdout streaming is what makes centralized logging possible: the platform grabs the stream and ships it to ELK, Loki, or CloudWatch. Your app just prints.
+
+Factor twelve says admin and management tasks — migrations, one-off scripts, data backfills — run as one-off processes in an identical environment to the app. Same codebase, same config, just a different command. In Kubernetes that's a Job or a kubectl run with the same image. The trap is running migrations from your laptop with different credentials and a different schema version — one-off processes in the same environment kill that whole class of bug."
+
+**Key Point:** "Logs go to stdout as event streams for the platform to route — never files that die with the container — and admin tasks run as one-off processes in the identical environment, never from someone's laptop."
+
+---
+
+## Interview Traps and Real World Calls
+
+### Q15: 'So I should put secrets in environment variables?' — what's the right answer?
+
+**How to Answer:**
+
+"This is the most common 12-factor trap in interviews, and the honest answer is: the factor says config in the environment, but the industry has moved on for secrets. Env vars leak — they show up in process listings, crash dumps, CI logs, and container inspect output. Anyone with read access to the runtime can see them.
+
+The modern answer: non-sensitive config in env vars, secrets in a secrets manager — Vault, AWS Secrets Manager, or Kubernetes Secrets mounted as files or injected at startup. The 12-factor principle survives: the app still reads secrets the same way regardless of environment, and the codebase still contains none.
+
+If an interviewer pushes — 'but Heroku uses env vars for everything' — I agree that's where it started, then note that even Heroku docs now recommend their secrets handling for sensitive values. The factor's spirit is 'no secrets in code'; the mechanism evolved. Knowing both the original and the evolution is what scores."
+
+**Key Point:** "12-factor's spirit is 'no secrets in code' — keep plain config in env vars but put real secrets in a secrets manager, because env vars leak through process listings, dumps, and logs."
