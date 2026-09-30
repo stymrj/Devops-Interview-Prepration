@@ -10,7 +10,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 |---|---------|--------|
 | 1 | [Linux & System Administration](linux-system-admin/) | 6/6 |
 | 2 | [Git & Version Control](version-control/) | 4/4 |
-| 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | 2/4 |
+| 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | 3/4 |
 | 4 | [Containers (Docker)](containers/) | ⬜ |
 | 5 | [Kubernetes](kubernetes/) | ⬜ |
 | 6 | [CI/CD](ci-cd/) | ⬜ |
@@ -37,6 +37,7 @@ A new guide lands here every day. Progress so far:
 - [x] 10 — [Advanced Git](version-control/10-advanced-git.md) (+ [hands-on lab](version-control/labs/10-advanced-git-lab.md), [cheat sheet](version-control/cheat-sheets/10-advanced-git-cheatsheet.md))
 - [x] 11 — [DevOps & SRE Fundamentals](core-concepts/11-devops-sre-fundamentals.md) (+ [hands-on lab](core-concepts/labs/11-devops-sre-fundamentals-lab.md), [cheat sheet](core-concepts/cheat-sheets/11-devops-sre-fundamentals-cheatsheet.md))
 - [x] 12 — [SLI, SLO, SLA & Error Budgets](core-concepts/12-sli-slo-sla-error-budgets.md) (+ [hands-on lab](core-concepts/labs/12-sli-slo-sla-error-budgets-lab.md), [cheat sheet](core-concepts/cheat-sheets/12-sli-slo-sla-error-budgets-cheatsheet.md))
+- [x] 13 — [DORA Metrics & Platform Engineering](core-concepts/13-dora-metrics-and-platform-engineering.md) (+ [hands-on lab](core-concepts/labs/13-dora-metrics-and-platform-engineering-lab.md), [cheat sheet](core-concepts/cheat-sheets/13-dora-metrics-and-platform-engineering-cheatsheet.md))
 
 ---
 
