@@ -118,3 +118,117 @@ The flags map directly: `--memory=512m` sets a cgroup memory limit, and when the
 The one-liner I use: namespaces lie to the container about what's there, cgroups ration what it gets."
 
 **Key Point:** "Namespaces isolate the view, cgroups ration the resources — memory, CPU, I/O — and without cgroup limits one container can starve the whole host."
+
+---
+
+## Images Layers and Storage
+
+### Q8: What is a Docker image, and why are layers such a big deal?
+
+**How to Answer:**
+
+"An image is a stack of read-only filesystem layers plus metadata — the config that says which command to run, which ports to expose, which environment variables to set. Each Dockerfile instruction creates one layer, and layers are content-addressed by their SHA256 digest.
+
+Layers matter for three reasons: sharing, caching, and copy-on-write. If ten images all start FROM the same base, that base layer is stored once and shared. During builds, unchanged layers are reused from cache instead of rebuilt. And at runtime, the container gets a thin writable layer on top — writes go there while the image layers stay untouched.
+
+That's why `docker pull` of a second similar image is fast — it only downloads the layers it doesn't already have."
+
+**Key Point:** "An image is read-only layers plus metadata; layers give you storage sharing, build caching, and copy-on-write — which is why pulls of similar images are fast."
+
+---
+
+### Q9: What's the difference between an image, a container, and a running process?
+
+**How to Answer:**
+
+"I frame it as: the image is the recipe, the container is the prepared dish, and the running process is the meal being eaten. The image is static and immutable — you can share it, sign it, scan it. The container is a runnable instance of the image: same layers plus a thin writable layer, plus its namespaces, cgroups, and network config.
+
+A stopped container still exists — its writable layer and metadata are on disk until you `docker rm` it. That's the trap: people think stopping a container deletes it. It doesn't. Dangling stopped containers eat disk, which is why `docker system prune` exists.
+
+And fundamentally, the 'container' only runs while its main process runs. Kill PID 1 and the container exits — the container lifecycle is the process lifecycle."
+
+**Key Point:** "Image is the immutable template, container is a runnable instance with a writable layer on top, and the container lives exactly as long as its main process."
+
+---
+
+### Q10: How does `docker build` work under the hood — and why does instruction order matter?
+
+**How to Answer:**
+
+"BuildKit — the modern builder — executes each Dockerfile instruction in order, and each one produces a layer cached by its content hash. When you rebuild, BuildKit checks the cache: if the instruction and its inputs are unchanged, it reuses the cached layer instead of re-executing.
+
+That's why order matters so much. Put `COPY . .` before `RUN npm install` and every code change invalidates the dependency-install layer — your builds get slow. Put the dependency install first, with only the lockfile copied, and code changes only invalidate the final copy layer. Builds drop from minutes to seconds.
+
+This is one of those questions where the interviewer is really testing whether you've felt slow builds in real life. The caching explanation is the answer, and the COPY-order trick is the proof you've lived it."
+
+```dockerfile
+COPY package*.json ./
+RUN npm ci
+COPY . ./
+```
+
+**Key Point:** "BuildKit caches each instruction as a layer keyed by content hash — so put stable, expensive steps early and volatile steps like copying source code last."
+
+---
+
+## Registries Pulls and OCI
+
+### Q11: What happens during `docker pull` — where do the bits actually come from?
+
+**How to Answer:**
+
+"The daemon asks the registry for the image manifest — a JSON document listing the config blob and every layer digest, plus the platform. Then it downloads only the layers it doesn't already have, verifies each layer's SHA256 against the manifest, and unpacks them into containerd's content store.
+
+The manifest is also how multi-arch images work. `docker pull nginx` on an ARM laptop gets the ARM manifest; on x86 it gets the AMD64 one. Same tag, different bits — the registry serves the right manifest based on what your client reports.
+
+And tags are just mutable pointers to manifests. `latest` means nothing technically — it's whatever was pushed last with that tag. That's why pinning digests matters in production: tags move, digests don't."
+
+**Key Point:** "Pull = fetch the manifest, download only missing layers, verify hashes — and tags are mutable pointers, so production should pin digests, not tags."
+
+---
+
+### Q12: What is the OCI, and why does it come up in every serious container interview?
+
+**How to Answer:**
+
+"The Open Container Initiative defines three specs that keep the ecosystem interoperable: the image spec for how images are packaged, the runtime spec for how a bundle becomes a running process, and the distribution spec for how registries serve them.
+
+Why it matters: because of OCI, an image built by Docker runs on containerd, podman, or any compliant runtime. runc is the reference OCI runtime implementation — it takes an OCI bundle (config.json plus rootfs) and turns it into a Linux process with namespaces and cgroups.
+
+In interviews, OCI is the answer to 'why isn't everyone locked into Docker?' The specs decoupled the tooling from the format, and containerd plus runc became the shared foundation. Docker is now one client among many on top of open standards."
+
+**Key Point:** "OCI standardizes the image format, runtime behavior, and registry protocol — so images are portable across Docker, containerd, and podman instead of locked to one vendor."
+
+---
+
+## Interview Traps and Real World Calls
+
+### Q13: Where does Docker actually store everything, and what disappears when a container is removed?
+
+**How to Answer:**
+
+"On a default install, everything lives under `/var/lib/docker` — image layers, container writable layers, volumes, and metadata — managed by the storage driver, usually overlay2. Volumes live at `/var/lib/docker/volumes` unless you gave them a custom path.
+
+When you remove a container with `docker rm`, its writable layer is deleted — anything written inside the container outside a volume is gone forever. The image layers stay because they're shared and read-only. Stopped-but-not-removed containers keep their writable layers sitting on disk, which is the classic 'why is the disk full' mystery.
+
+The production takeaway: containers are ephemeral by design, so anything that must survive goes in a volume or a bind mount. Stateful data never lives in the writable layer."
+
+**Key Point:** "Everything lives under /var/lib/docker; removing a container deletes its writable layer — so persistent data always goes in volumes, never in the container filesystem."
+
+---
+
+### Q14: What are the classic traps people fall into when talking about Docker architecture?
+
+**How to Answer:**
+
+"Three traps I see constantly. First, saying containers have their own OS or kernel — they don't; they share the host kernel, which is why Windows containers need a Linux VM underneath and why kernel exploits can escape containers.
+
+Second, treating the Docker daemon as the runtime. The daemon is the API and management layer; containerd runs containers, runc creates the processes. Since Kubernetes dropped dockershim, this distinction is load-bearing, not trivia.
+
+Third, running everything as root inside containers and calling it secure. A root process in a container is root in its user namespace — and without a USER directive plus dropped capabilities, a container breakout lands you as host root. My rule: non-root user, read-only filesystem where possible, drop ALL capabilities and add back only what's needed."
+
+**Key Point:** "The big three traps: containers share the host kernel, dockerd is management not the runtime, and root-in-container without dropped capabilities is a breakout waiting to happen."
+
+---
+
+*End of guide — Day 15 of 58. Next: Dockerfile Best Practices & Multi-Stage Builds.*
