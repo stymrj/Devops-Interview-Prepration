@@ -127,3 +127,71 @@ docker exec db ss -tlnp | grep 5432    # is it bound to 0.0.0.0 or 127.0.0.1?
 **Key Point:** "Debug in layers: same network, then name resolution, then the server's bind address — that order catches 90% of cases."
 
 ---
+
+## Overlay Networks and Multi Host Communication
+
+### Q9: How do containers on different hosts talk to each other in Swarm mode?
+
+**How to Answer:**
+
+"Through an overlay network — a virtual network built on VXLAN tunnels between the hosts. Each host's Docker daemon wraps container-to-container packets in UDP on port 4789 and ships them to the right host, where they're unwrapped and delivered. Your containers just see one flat network and talk by name.
+
+You create it with `docker network create -d overlay`, and Swarm's routing mesh makes any node's published port reach any replica. The catch: Swarm mode must be initialized first — overlays don't work on standalone Docker. And encrypted overlays cost CPU, so benchmark if you're pushing serious throughput."
+
+**Key Point:** "Overlay networks stitch hosts together with VXLAN tunnels so containers communicate by name as if on one flat network."
+
+---
+
+### Q10: What is the ingress routing mesh in Swarm?
+
+**How to Answer:**
+
+"When you publish a port on a Swarm service, that port opens on EVERY node in the cluster — not just nodes running the task. The ingress overlay network routes incoming traffic to a node that actually runs a replica, load-balancing across them.
+
+That's powerful — clients can hit any node's IP — but it surprises people when their service responds from a node with zero replicas. That's the mesh doing its job. If you want traffic pinned to nodes actually running the service, use `--publish mode=host`, which bypasses the mesh entirely."
+
+**Key Point:** "The routing mesh forwards every node's published port to some live replica — convenient, but know the difference from host-mode publishing."
+
+---
+
+## Container Network Security
+
+### Q11: Containers on the same network can talk freely — how do you restrict that?
+
+**How to Answer:**
+
+"By default, yes — any container on a user-defined network can reach any other container's open ports, and plain Docker gives you no per-container firewall rules. The standard answer is segmentation: separate networks per tier, containers attached only where they need access.
+
+For real policy — api may reach db on 5432, nothing else may — you step up to an orchestrator: Kubernetes NetworkPolicies or a service mesh. On plain Docker the workarounds are host-level iptables rules or a proxy sidecar. The interview point is: Docker networking is connectivity-first, and restriction is something you layer on."
+
+**Key Point:** "Docker networks are open by default — you get isolation through segmentation, and real per-container policy needs Kubernetes NetworkPolicies or a service mesh."
+
+---
+
+## Common Interview Traps
+
+### Q12: A container can curl external sites but can't be reached from the browser. What's wrong?
+
+**How to Answer:**
+
+"Outbound works because the default bridge NATs egress automatically, but inbound needs an explicit published port. If you ran without `-p`, nothing on the host forwards into the container — the app listens happily in a namespace nobody routes to.
+
+The fix is `docker run -p <host>:<container>`. The trap version: they DID publish, but the app bound to 127.0.0.1 instead of 0.0.0.0. Inside a container, localhost is the container's own namespace — binding there means even published ports forward into silence. The app must listen on 0.0.0.0 to be reachable at all."
+
+**Key Point:** "Outbound is NATed by default but inbound needs `-p` — and the app inside must bind 0.0.0.0, because localhost in a container is only the container."
+
+---
+
+### Q13: From inside a container, what does `localhost` point to?
+
+**How to Answer:**
+
+"The container itself. Each container has its own network namespace, so localhost inside one is completely separate from the host's localhost or another container's. This trips people with service dependencies: if your app config points at `localhost:5432` expecting Postgres but Postgres is in another container, it fails.
+
+The correct address is the container's name on their shared network — `db:5432` — resolved by the embedded DNS. The only time localhost-to-container works is `--network host` mode, where namespaces are shared. For everything else: names, not localhost."
+
+**Key Point:** "localhost inside a container is only that container — cross-container calls go by name on a shared user-defined network."
+
+---
+
+*Day 17 of 58 — Containers. Next: Docker storage & volumes.*
