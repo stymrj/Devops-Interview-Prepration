@@ -11,7 +11,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 1 | [Linux & System Administration](linux-system-admin/) | 6/6 |
 | 2 | [Git & Version Control](version-control/) | 4/4 |
 | 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | 4/4 |
-| 4 | [Containers (Docker)](containers/) | 3/5 |
+| 4 | [Containers (Docker)](containers/) | 4/5 |
 | 5 | [Kubernetes](kubernetes/) | ⬜ |
 | 6 | [CI/CD](ci-cd/) | ⬜ |
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | ⬜ |
@@ -42,6 +42,7 @@ A new guide lands here every day. Progress so far:
 - [x] 15 — [Docker Deep Dive](containers/15-docker-deep-dive.md) (+ [hands-on lab](containers/labs/15-docker-deep-dive-lab.md), [cheat sheet](containers/cheat-sheets/15-docker-deep-dive-cheatsheet.md))
 - [x] 16 — [Dockerfile Best Practices & Multi-Stage Builds](containers/16-dockerfile-best-practices.md) (+ [hands-on lab](containers/labs/16-dockerfile-best-practices-lab.md), [cheat sheet](containers/cheat-sheets/16-dockerfile-best-practices-cheatsheet.md))
 - [x] 17 — [Docker Networking](containers/17-docker-networking.md) (+ [hands-on lab](containers/labs/17-docker-networking-lab.md), [cheat sheet](containers/cheat-sheets/17-docker-networking-cheatsheet.md))
+- [x] 18 — [Docker Storage & Volumes](containers/18-docker-storage-volumes.md) (+ [hands-on lab](containers/labs/18-docker-storage-volumes-lab.md), [cheat sheet](containers/cheat-sheets/18-docker-storage-volumes-cheatsheet.md))
 
 ---
 
