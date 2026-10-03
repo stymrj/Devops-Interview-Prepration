@@ -120,3 +120,80 @@ services:
 "Databases and anything that must survive a restart go on named volumes — `db-data:/var/lib/postgresql/data` — because the daemon manages them and they survive container recreation. I use bind mounts for things the host owns: source code I'm hot-reloading in dev, config files I'm iterating on. The trap is mixing them up — bind-mounting a database directory into a path that doesn't exist on a teammate's machine, or losing dev work by putting source in a named volume. My rule in dev: bind-mount code, named volumes for state. In production: everything persistent is a named volume, ideally declared external so Compose never deletes it by accident."
 
 **Key Point:** "Named volumes for persistent state that must survive restarts; bind mounts for host-owned code and config you're actively editing."
+
+---
+
+## Configuration and Environment Management
+
+### Q7: How do you manage different environments — dev, staging, prod — in Compose?
+
+**How to Answer:**
+
+"I keep a base compose.yaml and override files per environment: compose.override.yaml auto-loads in dev with hot-reload mounts and debug settings, while prod runs with `-f compose.yaml -f compose.prod.yaml` for replicas and resource limits. Environment-specific values come from .env files or the shell environment, so secrets never land in the compose file itself. The key discipline is that the base file stays runnable on its own — overrides only adjust, never define. That way the same artifacts deploy everywhere, and the only thing changing between environments is configuration."
+
+```bash
+# dev (override auto-loads)
+docker compose up -d
+# prod (explicit files, no override)
+docker compose -f compose.yaml -f compose.prod.yaml up -d
+```
+
+**Key Point:** "One base compose file plus per-environment override files and .env variables — same artifacts everywhere, only config changes."
+
+---
+
+### Q8: How do you handle secrets in Compose without leaking them?
+
+**How to Answer:**
+
+"The naive move is environment variables in the compose file, which leaks secrets into docker inspect output and git history. I use the secrets top-level key with a file source in dev — Compose mounts the file at /run/secrets/<name> inside the container, never in the environment. For production I point secrets at external sources or inject them through the shell with ${DB_PASSWORD} from a vault-populated, gitignored .env. The rule I tell interviewers: if a secret is visible in your compose file or in docker inspect, you've already leaked it."
+
+**Key Point:** "Use Compose secrets (file-mounted at /run/secrets) or vault-backed env vars — never hardcode secrets where docker inspect or git can see them."
+
+---
+
+## Production and Deployment Patterns
+
+### Q9: Is Docker Compose suitable for production?
+
+**How to Answer:**
+
+"Honestly — yes for small to medium workloads, with caveats. Compose is brilliant on a single host: a side project, a small SaaS, internal tools. But it has no built-in high availability, no rolling updates across nodes, and no auto-scaling — when the host dies, everything dies. If I outgrow one host, that's the signal to move to ECS, Swarm, or Kubernetes. In interviews I say Compose is a deployment tool for single-host simplicity, not an orchestrator. Using it in production is fine as long as you can answer 'what happens when this box dies' without flinching."
+
+**Key Point:** "Compose is a fine production tool for single-host workloads; it's not an orchestrator — know its limits and the migration path off it."
+
+---
+
+### Q10: How do you do zero-downtime deploys with Compose?
+
+**How to Answer:**
+
+"Compose's built-in answer is docker compose up -d again with the new image — it recreates only changed services, but there's still a restart gap. For real zero downtime I run the new version alongside the old one: scale up a second container on a different port, healthcheck it, then flip a reverse proxy like nginx or Traefik to the new one and tear the old down. That's a manual blue-green deploy. Some teams use --scale with a load balancer in front for rolling updates. It's doable, but it takes plumbing that Kubernetes gives you for free."
+
+**Key Point:** "Recreating services causes a restart gap — zero downtime needs blue-green behind a proxy or rolling updates via --scale, which you build yourself."
+
+---
+
+## Common Interview Traps
+
+### Q11: Why did my Compose setup work locally but fail in CI?
+
+**How to Answer:**
+
+"Nine times out of ten it's an implicit assumption: a hardcoded port that CI already uses, a bind mount pointing at a path that doesn't exist on the runner, or depends_on without a healthcheck so the app started before the database was ready. My debugging order is docker compose logs, then docker compose ps to check container states, then verifying every bind mount and env var actually resolves on the runner. I also pin image tags — :latest on my machine might be a different digest than CI pulled yesterday. Reproducible beats convenient every time."
+
+**Key Point:** "Local-vs-CI failures are almost always implicit assumptions: ports, host paths, missing healthchecks, or unpinned image tags."
+
+---
+
+### Q12: Compose v1 vs v2 — what changed, and why does it matter?
+
+**How to Answer:**
+
+"Compose v1 was a Python package invoked as docker-compose with a hyphen; v2 is a Go plugin built into the Docker CLI, invoked as docker compose with a space. V2 is dramatically faster at starting large stacks because it creates containers in parallel and talks to the daemon natively instead of shelling out. It also handles healthcheck-based depends_on conditions more reliably. In an interview the honest answer is: if you still type docker-compose with a hyphen, you're on the legacy version — v2 has been the default since Docker Desktop 4.x. Migration is mostly painless since the compose file format barely changed."
+
+**Key Point:** "V1 was the Python docker-compose; V2 is the built-in docker compose plugin — faster, parallel starts, and the default for years now."
+
+---
+
+*Day 19 of 58 — next up: Kubernetes architecture (control plane & nodes).*
