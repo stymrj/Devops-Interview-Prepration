@@ -12,7 +12,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 2 | [Git & Version Control](version-control/) | 4/4 |
 | 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | 4/4 |
 | 4 | [Containers (Docker)](containers/) | 5/5 |
-| 5 | [Kubernetes](kubernetes/) | ⬜ |
+| 5 | [Kubernetes](kubernetes/) | 1/8 |
 | 6 | [CI/CD](ci-cd/) | ⬜ |
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | ⬜ |
 | 8 | [Cloud (AWS)](cloud-aws/) | ⬜ |
@@ -44,6 +44,7 @@ A new guide lands here every day. Progress so far:
 - [x] 17 — [Docker Networking](containers/17-docker-networking.md) (+ [hands-on lab](containers/labs/17-docker-networking-lab.md), [cheat sheet](containers/cheat-sheets/17-docker-networking-cheatsheet.md))
 - [x] 18 — [Docker Storage & Volumes](containers/18-docker-storage-volumes.md) (+ [hands-on lab](containers/labs/18-docker-storage-volumes-lab.md), [cheat sheet](containers/cheat-sheets/18-docker-storage-volumes-cheatsheet.md))
 - [x] 19 — [Docker Compose](containers/19-docker-compose.md) (+ [hands-on lab](containers/labs/19-docker-compose-lab.md), [cheat sheet](containers/cheat-sheets/19-docker-compose-cheatsheet.md))
+- [x] 20 — [Kubernetes Architecture](kubernetes/20-kubernetes-architecture.md) (+ [hands-on lab](kubernetes/labs/20-kubernetes-architecture-lab.md), [cheat sheet](kubernetes/cheat-sheets/20-kubernetes-architecture-cheatsheet.md))
 
 ---
 
