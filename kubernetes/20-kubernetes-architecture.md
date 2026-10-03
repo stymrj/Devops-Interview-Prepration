@@ -90,4 +90,97 @@ journalctl -u kubelet --since "30 min ago" | tail -50
 
 ---
 
-PART2_PLACEHOLDER
+## etcd and the API Server
+
+### Q7: Why is etcd the most critical part of the cluster?
+
+**How to Answer:**
+
+"Because etcd holds every object in the cluster — pods, deployments, secrets, the whole desired state. Every other component is stateless: kill the scheduler and unscheduled pods just wait; kill etcd quorum and the control plane can't read or write anything. That's why etcd runs as an odd-numbered quorum — 3 or 5 members — so it survives losing a member, and why I always back it up separately from the cloud provider's snapshots. The interview trap: people say 'just scale etcd for performance.' No — adding members past 5 slows consensus down, not up. Three members is the sweet spot for almost everyone."
+
+```bash
+# verify etcd health and take a backup
+ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  endpoint health
+```
+
+**Key Point:** "etcd is the single source of truth — every other control plane component is stateless, so protect quorum and back it up."
+
+---
+
+### Q8: How do components and users authenticate with the API server?
+
+**How to Answer:**
+
+"Everything presents credentials to the API server — the only component that verifies identity. Human users usually get a client certificate or a token, often issued through an OIDC provider like Google or Okta in managed clusters. Every in-cluster component — kubelet, scheduler, controller managers — uses TLS client certs issued by the cluster CA. Then authorization happens: RBAC roles and bindings decide what that identity can do. The neat part I always mention: each pod gets a ServiceAccount token automatically mounted, so pods can talk to the API server as themselves, and I restrict those with RBAC so a compromised pod can't read the whole cluster."
+
+**Key Point:** "API server is the only identity checker — TLS certs for components, tokens or OIDC for users, and RBAC decides what each identity may touch."
+
+---
+
+## Scheduling and Resource Management
+
+### Q9: Walk me through what happens when I run kubectl apply on a Deployment.
+
+**How to Answer:**
+
+"kubectl sends the YAML to the API server, which validates it, stores it in etcd, and returns. The deployment controller sees the new Deployment and creates a ReplicaSet; the ReplicaSet controller sees it wants three replicas and creates three pod objects — all still unscheduled. The scheduler watches for pods with no node, picks the best node based on resources and constraints, and writes the binding. The kubelet on that node sees its assigned pod, pulls the images, and starts the containers, reporting status back to the API server. Meanwhile the endpoints controller wires up the Service. Nothing in that chain is synchronous — it's all small loops watching etcd and nudging reality toward the declared state."
+
+**Key Point:** "kubectl writes desired state to etcd; controllers fan it out into ReplicaSets and pods; scheduler binds; kubelets execute — all async control loops."
+
+---
+
+### Q10: How does the scheduler pick a node for a pod?
+
+**How to Answer:**
+
+"It filters, then scores. First it throws out nodes that can't run the pod — not enough free CPU or memory after requests are accounted for, wrong OS or architecture, taints the pod doesn't tolerate, a node selector or affinity that doesn't match. Then it scores the survivors: spreading pods across zones, bin-packing onto already-warm nodes, preferring nodes with the image already cached. Highest score wins, and the scheduler writes the binding to the API server. Two things trip people up: the scheduler only looks at requests, not limits, when checking capacity — and it never evicts or moves existing pods to make room, it just picks among nodes that fit."
+
+**Key Point:** "Scheduler filters out unfit nodes, scores the rest, binds the winner — it uses requests, not limits, and never moves running pods to make room."
+
+---
+
+## Networking and Service Communication
+
+### Q11: How does a Service actually route traffic to pods?
+
+**How to Answer:**
+
+"A Service is just a stable virtual IP plus a set of endpoints — the current matching pods — maintained by the endpoints controller. Kube-proxy watches Services and endpoints on every node and programs the routing rules: in iptables mode it writes NAT rules that load-balance to pod IPs, in IPVS mode it programs the kernel's load balancer. So when my app calls http://backend:80, the packet hits the Service's cluster IP and gets DNAT-ed to a real pod. CoreDNS resolves the service name to that cluster IP in the first place. That's also why a Service survives pods dying and getting new IPs — the endpoints list updates, the rules get reprogrammed, and clients never notice."
+
+```bash
+# see the actual routing kube-proxy programmed for a service
+kubectl get endpoints my-app
+iptables -t nat -L KUBE-SERVICES -n | head -20
+```
+
+**Key Point:** "Service is a stable virtual IP over a dynamic pod list; kube-proxy programs NAT or IPVS rules on every node so traffic follows the pods."
+
+---
+
+## Common Interview Traps
+
+### Q12: What's the difference between requests and limits, and why does getting them wrong cause outages?
+
+**How to Answer:**
+
+"Requests are what the scheduler uses to place the pod — it's a reservation of node capacity. Limits are the hard ceiling the kubelet enforces at runtime. Set requests too low and pods pile onto a node until it runs out of memory and the OOM killer starts murdering containers — that's the classic noisy-neighbor outage. Set limits too low and your own pod gets throttled on CPU or OOM-killed on memory. My rule of thumb: requests equal what the app actually uses at steady state, limits have headroom above the p99. And never set CPU limits equal to requests for bursty apps — throttling is worse than sharing."
+
+**Key Point:** "Requests drive scheduling, limits cap runtime — under-set requests and nodes overcommit until the OOM killer fires."
+
+---
+
+### Q13: How do you debug when kubectl suddenly can't reach the cluster?
+
+**How to Answer:**
+
+"I start top-down at the front door. First kubectl with -v to see if it's a cert or network issue — expired kubeconfig certs are embarrassingly common. Then I check whether the API server process is alive on the control plane nodes, then etcd health — a lost quorum means the API server can't serve anything. If those are fine, I look at the network path: firewall rules, load balancer health checks on the control plane. The insight interviewers want: kubectl talks only to the API server, so 'connection refused' is almost never a worker node problem — it's the control plane or the network in front of it."
+
+**Key Point:** "kubectl only talks to the API server — connection failures mean API server, etcd, certs, or the network in front of the control plane, not worker nodes."
+
+---
+
+*Built for interview prep, one deep-dive at a time.*
