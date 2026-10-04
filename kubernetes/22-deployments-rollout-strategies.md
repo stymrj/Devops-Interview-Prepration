@@ -147,3 +147,101 @@ strategy:
 "After the fix, `kubectl rollout resume` continues. And `kubectl rollout history deployment/web` shows all revisions with their change causes, which is the first place I look when debugging."
 
 **Key Point:** "Rollout status to watch, pause to freeze, resume to continue, history to audit — the rollout subcommand is the whole toolkit."
+
+---
+
+## Rollout Strategies
+
+### Q9: What is the Recreate strategy, and when is it acceptable?
+
+**How to Answer:**
+
+"Recreate kills all old Pods first, then creates the new ones. There's guaranteed downtime — the old version is fully gone before the new one starts."
+
+"I'd only use it when two versions absolutely can't run side by side — like a migration that changes a data format the old code can't read, or a resource-constrained test environment. In production with real traffic, it's almost never the right call."
+
+```yaml
+strategy:
+  type: Recreate
+```
+
+**Key Point:** "Recreate = all-down-then-up. Only for workloads that can't tolerate two versions coexisting."
+
+---
+
+### Q10: How do blue-green deployments work in Kubernetes?
+
+**How to Answer:**
+
+"You run two identical environments — blue is live, green gets the new version. Once green is verified, you flip the Service selector from blue labels to green labels and all traffic moves at once."
+
+"The flip is instant and rollback is just flipping the selector back. But you're paying for double the capacity while both environments exist."
+
+"In Kubernetes there's no native blue-green resource — you do it with two Deployments and a Service whose selector you switch, often with Argo Rollouts or a CI script managing it."
+
+**Key Point:** "Blue-green = two full environments, one Service selector flip. Instant switch, instant rollback, double the cost."
+
+---
+
+### Q11: How do you run a canary deployment without a service mesh?
+
+**How to Answer:**
+
+"The simplest way: two Deployments, one Service. The stable Deployment has 9 replicas, the canary has 1, and the Service selects both. Roughly 10% of traffic hits the canary — it's crude but it works."
+
+"For real control I use Argo Rollouts — it automates the steps, pauses between them, runs analysis on Prometheus metrics, and auto-aborts on failure. Flagger does the same job with a slightly different model."
+
+"The key point is the canary gets real production traffic. Synthetic tests in staging don't catch the weird interactions that a small percentage of live traffic surfaces."
+
+**Key Point:** "Canary = a slice of real traffic on the new version, with automated promotion or abort based on metrics."
+
+---
+
+### Q12: When do you pick canary vs blue-green?
+
+**How to Answer:**
+
+"I pick canary when the risk is in the new code — I want real user behavior on it gradually, with metrics deciding whether to proceed. It's about catching regressions before everyone sees them."
+
+"I pick blue-green when the risk is in the cutover — database migrations, schema changes, or anything where running both versions against shared state is dangerous. You verify the whole thing first, then flip everyone at once."
+
+"If you can only pick one tool to learn, canary with Argo Rollouts covers more real-world interview scenarios."
+
+**Key Point:** "Canary tests the new code on real users gradually; blue-green tests the whole new stack, then switches everyone."
+
+---
+
+### Q13: Can you use Deployments for stateful workloads?
+
+**How to Answer:**
+
+"You can, but it's painful. Deployments scale and update all Pods in parallel with no ordering guarantees — and their names are random, so a replacement Pod gets a new name and loses its identity."
+
+"Stateful workloads need stable network identity, ordered startup, and per-Pod storage — that's what StatefulSets are for. Running a database on a plain Deployment means a reschedule could hand your data volume to the wrong Pod."
+
+"So: Deployments for stateless services, StatefulSets for anything with persistent identity. Knowing that line is exactly what the interviewer is testing."
+
+**Key Point:** "Deployments have no ordering or identity — use StatefulSets the moment Pod identity matters."
+
+---
+
+## Troubleshooting Rollouts
+
+### Q14: Your rollout is stuck and `kubectl rollout status` eventually says progressDeadlineExceeded. What do you do?
+
+**How to Answer:**
+
+"First I check what the new Pods are actually doing — `kubectl get pods` to see if they're CrashLooping or Pending, then `kubectl describe pod` and `kubectl logs` for the failing ones."
+
+"Nine times out of ten it's one of three things: a bad image tag that doesn't exist, a readiness probe that's misconfigured and never passes, or resource requests the cluster can't satisfy so Pods sit Pending."
+
+"If the cause is clear and unfixable quickly, I run `kubectl rollout undo` to get back to the last good revision first, then debug the new version offline. Getting service stable beats hero-debugging on a broken rollout."
+
+```bash
+kubectl rollout status deployment/web
+kubectl get pods -l app=web
+kubectl describe pod web-<hash>
+kubectl rollout undo deployment/web
+```
+
+**Key Point:** "Stuck rollout: inspect new Pods, find the real blocker, and undo to the good revision before you dig deeper."
