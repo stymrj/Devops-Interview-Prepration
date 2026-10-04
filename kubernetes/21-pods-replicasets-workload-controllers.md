@@ -117,3 +117,103 @@ readinessProbe:
 **Key Point:** "Liveness restarts dead containers, readiness removes from endpoints without restarting, startup pauses liveness during slow boots."
 
 ---
+## ReplicaSets and Selectors
+
+### Q9: What's the difference between a ReplicaSet and a ReplicationController?
+
+**How to Answer:**
+
+"ReplicationController is the legacy API — it only supports equality-based selectors like `app=web`, and it's effectively deprecated. ReplicaSet is the replacement with the same job — keep N identical Pods running — but with set-based selectors like `app in (web, api)` and `tier notin (db)`. In practice I almost never create a ReplicaSet directly; Deployments create and manage them. The one place ReplicaSets show up alone is when I need the self-healing loop without rollout behavior. Interviewers ask this to check whether you know ReplicaSets are the mechanism and Deployments are the management layer on top."
+
+```yaml
+selector:
+  matchLabels: { app: web }
+```
+
+**Key Point:** "ReplicationController is deprecated; ReplicaSet adds set-based selectors — and Deployments manage ReplicaSets, you rarely create one directly."
+
+---
+
+### Q10: How does a ReplicaSet know which Pods are "its" Pods?
+
+**How to Answer:**
+
+"Through label selectors, and it's purely a matching rule — not ownership by creation. The ReplicaSet's selector must match the labels on its Pod template, and any existing Pod with matching labels gets adopted by the ReplicaSet, even one you created manually with `kubectl run`. That's why the Pod template labels and the selector have to agree, and why accidentally matching an existing Pod means your replica count math breaks. If a Pod dies, the ReplicaSet controller just counts matching Pods, sees fewer than desired, and creates more. This adoption behavior is also why changing a ReplicaSet's selector on a live object is forbidden — it would orphan or steal Pods unpredictably."
+
+**Key Point:** "ReplicaSets adopt any Pod whose labels match their selector — ownership is by label matching, not by who created the Pod."
+
+---
+
+## DaemonSets and StatefulSets
+
+### Q11: When do you use a DaemonSet, and what are the classic examples?
+
+**How to Answer:**
+
+"DaemonSet guarantees exactly one Pod per node — or per selected node — which is what I need for node-level infrastructure. Classic examples: log agents like Fluent Bit, monitoring agents like the Datadog agent, CNI networking components, and kube-proxy itself. The use case test is simple: the workload makes sense once per machine, not per application. DaemonSets respect taints and tolerations, so I can schedule a monitoring agent onto nodes tainted for GPU workloads if the agent needs to watch those too. One gotcha: rolling updates on DaemonSets update node by node, so I watch for the surge of churn on large clusters."
+
+**Key Point:** "DaemonSet runs one Pod per node for machine-level agents — log shippers, monitoring, CNI, kube-proxy."
+
+---
+
+### Q12: What's special about StatefulSets compared to Deployments?
+
+**How to Answer:**
+
+"StatefulSets give each Pod a stable identity: a predictable hostname like `db-0`, `db-1`, and a stable persistent volume that follows the Pod through restarts. They're created and deleted in order — `db-0` fully starts before `db-1` — which databases with leader election depend on. That comes from a headless Service plus `volumeClaimTemplates` that provision one PVC per replica. I reach for StatefulSets for databases like Postgres or Cassandra, and message systems like Kafka and Zookeeper. The trade-off is slower, more careful operations: no random scaling, and deletes remove Pods in reverse order."
+
+```yaml
+serviceName: "db"
+volumeClaimTemplates:
+- metadata: { name: data }
+  spec: { accessModes: ["ReadWriteOnce"], resources: { requests: { storage: 10Gi } } }
+```
+
+**Key Point:** "StatefulSets give stable hostnames, ordered startup, and per-Pod volumes — that's the whole point of running databases on Kubernetes."
+
+---
+
+### Q13: My database Pod restarts and loses its data. What did I do wrong?
+
+**How to Answer:**
+
+"You used a Deployment with an `emptyDir` volume or no volume at all. Container filesystems are ephemeral — when the container dies, everything not on a mounted volume is gone, and emptyDir dies with the Pod. The fix is a PersistentVolumeClaim: for a single-instance database a Deployment with a PVC is honestly fine, but once you need replicas or ordered failover, move to a StatefulSet. This is a classic 'say the right fix, not the fancy one' question: the interviewer wants to hear 'mount a PVC' first, and StatefulSet only if there's a real reason. I also check the storage class, because a PVC in Pending usually means dynamic provisioning has no matching provisioner."
+
+**Key Point:** "Container filesystems are ephemeral — persist with a PVC; reach for StatefulSets when replicas need stable identity, not by default."
+
+---
+
+## Jobs and CronJobs
+
+### Q14: When do you use a Job instead of a Deployment?
+
+**How to Answer:**
+
+"A Deployment wants N Pods running forever; a Job wants a task to run to completion. Database migrations, one-off data imports, batch processing, report generation — anything with a defined end. The Job controller creates Pods and retries them on failure up to `backoffLimit`, and `completions` plus `parallelism` control how many successful runs I need and how many run at once. For scheduling, CronJob wraps Job with a cron expression. The production details I always mention: set `activeDeadlineSeconds` so a hung job can't run forever, and set `ttlSecondsAfterFinished` so finished Pods get cleaned up instead of piling up in etcd."
+
+```yaml
+spec:
+  completions: 5
+  parallelism: 2
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  template: { ... }
+```
+
+**Key Point:** "Deployments run forever, Jobs run to completion — use Jobs for migrations and batch work, with backoffLimit and TTL cleanup."
+
+---
+
+## Common Interview Traps
+
+### Q15: A Pod is stuck in Pending. Walk me through your debugging order.
+
+**How to Answer:**
+
+"I run `kubectl describe pod` first and read the Events section — it tells me the actual reason. The usual suspects in order: no node has enough CPU or memory, which shows as 'Insufficient cpu' and I check `kubectl top nodes` and resource requests; a node selector or affinity that matches nothing; taints without tolerations; an image that can't be pulled, which shows as ImagePullBackOff instead of plain Pending; or a PVC that can't bind because the storage class has no provisioner. I never guess — the Events section is the answer key, and I say that in interviews. One more: on a fresh cluster, Pending with 'no nodes available to schedule' usually means the nodes aren't Ready yet."
+
+**Key Point:** "kubectl describe pod, read Events, fix what it names — resources, affinity, taints, image pulls, unbound PVCs, in that order."
+
+---
+
+*That's the whole topic — Pods as the unit, ReplicaSets for self-healing, and the right controller for each workload shape. Next: Deployments & rollout strategies.*
