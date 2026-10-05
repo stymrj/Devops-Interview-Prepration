@@ -119,3 +119,85 @@ env:
 "Native Secrets are fine for static values, but they don't solve rotation or centralized management. When you have dozens of microservices sharing database passwords that rotate every 30 days, hand-editing Secret manifests is a losing game."
 
 "External Secrets Operator syncs values from Vault, AWS Secrets Manager, or similar into native Secret objects on a schedule — so the app code doesn't change, but the source of truth lives in a real secret manager with audit logs and automatic rotation. Vault adds dynamic secrets too — credentials that only exist for the lifetime of the lease, which is the gold standard for blast radius."
+
+**Key Point:** "External managers own the lifecycle — rotation, audit, short-lived credentials — while apps keep consuming plain native Secrets."
+
+---
+
+## Environment Variables and Configuration Strategy
+
+### Q9: Why do container apps prefer environment variables for config?
+
+**How to Answer:**
+
+"Env vars are the lowest common denominator — every language, every framework, every container runtime supports them with zero dependencies. They're set at deploy time, so the same image works in every environment without modification."
+
+"This is also the 12-factor app principle in action: config that varies between deploys lives in the environment, not the code. I'd say for simple key-values env vars are ideal; the moment config becomes structured or large, that's when I reach for a mounted config file instead."
+
+**Key Point:** "Env vars are universal and deploy-time — the simplest way to keep one image for all environments."
+
+---
+
+### Q10: immutable ConfigMaps — when and why would I use them?
+
+**How to Answer:**
+
+"Marking a ConfigMap immutable means once it's created, it can never be updated — to change config you create a new version and roll the Pods to reference it. That sounds annoying but it removes a whole class of bugs: no silent config drift, no 'who changed this and when', every config change is a new versioned object."
+
+"There's a performance win too — the API server can serve immutable ConfigMaps straight from its watch cache instead of hitting etcd, which matters at scale. I recommend immutable for stable config; keep mutable only for things that genuinely need hot updates like feature-flag style toggles."
+
+**Key Point:** "Immutable ConfigMaps trade convenience for safety — every config change becomes a versioned, traceable rollout."
+
+---
+
+### Q11: How do you manage configuration across dev, staging, and production?
+
+**How to Answer:**
+
+"One image, environment-specific config layered on top. The base Deployment manifest references ConfigMaps and Secrets by name, and then each environment gets its own overlay — Kustomize overlays or Helm values files — that swaps in the right values."
+
+"Common config lives in the base, environment overrides live in the overlay. And for anything shared across environments, like a central artifact registry URL, I put it once in the base so nobody redefines it per env and they inevitably drift apart."
+
+```bash
+kubectl apply -k overlays/production/     # same image, prod config
+```
+
+**Key Point:** "Build once, configure per environment with overlays — never fork the image or the manifest per env."
+
+---
+
+## Troubleshooting and Best Practices
+
+### Q12: My Pod can't see an environment variable — how do you debug it?
+
+**How to Answer:**
+
+"First I check the obvious: `kubectl describe pod` shows exactly what env vars were resolved at startup. If the variable is missing, the usual suspects are a typo in the ConfigMap or Secret name, or a wrong key name — Kubernetes fails silently on missing optional references unless you set `optional: false`."
+
+"If it references a ConfigMapKeyRef, I `kubectl get configmap <name>` to confirm the key actually exists. And I always remember: env vars freeze at container start. If someone changed the ConfigMap an hour ago, the running Pods won't see it — restart the Deployment and the problem usually vanishes."
+
+**Key Point:** "Describe the Pod, verify the referenced key exists, and remember env vars freeze at startup — a restart is often the fix."
+
+---
+
+### Q13: Someone committed a Secret to git — what's your response?
+
+**How to Answer:**
+
+"The moment a secret touches git, it's compromised — full stop. You rotate it immediately, everywhere: database password, API key, whatever it was. Deleting the commit from history is cosmetic; anyone who pulled or forked already has it."
+
+"Then I fix the process: add the pattern to gitignore, set up pre-commit scanning like gitleaks or git-secrets, and enable push protection on the repo so it can't happen again. The interview lesson: the fix is rotation first, tooling second, blame never."
+
+**Key Point:** "A committed secret is a compromised secret — rotate first, then add guardrails, never just rewrite history."
+
+---
+
+### Q14: What's the one config mistake you see teams repeat in Kubernetes?
+
+**How to Answer:**
+
+"Shipping secrets as environment variables in CI/CD logs. Someone adds `env:` with a hardcoded value in a pipeline or a debug `echo $DB_PASSWORD` in a build step, and now the password is in the pipeline logs forever — and pipeline logs get exported, archived, and searched by more people than you'd think."
+
+"My rule: Secrets are referenced by name in manifests, never pasted as values, and pipelines run with masked variables. If I can't `kubectl get deploy -o yaml` and see only a reference — not a value — the setup is wrong."
+
+**Key Point:** "Secrets by reference, never by value — anywhere a secret appears as plaintext, that's the bug."
