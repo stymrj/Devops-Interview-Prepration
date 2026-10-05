@@ -12,7 +12,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 2 | [Git & Version Control](version-control/) | 4/4 |
 | 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | 4/4 |
 | 4 | [Containers (Docker)](containers/) | 5/5 |
-| 5 | [Kubernetes](kubernetes/) | 3/8 |
+| 5 | [Kubernetes](kubernetes/) | 4/8 |
 | 6 | [CI/CD](ci-cd/) | ⬜ |
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | ⬜ |
 | 8 | [Cloud (AWS)](cloud-aws/) | ⬜ |
@@ -47,6 +47,7 @@ A new guide lands here every day. Progress so far:
 - [x] 20 — [Kubernetes Architecture](kubernetes/20-kubernetes-architecture.md) (+ [hands-on lab](kubernetes/labs/20-kubernetes-architecture-lab.md), [cheat sheet](kubernetes/cheat-sheets/20-kubernetes-architecture-cheatsheet.md))
 - [x] 21 — [Pods, ReplicaSets & Workload Controllers](kubernetes/21-pods-replicasets-workload-controllers.md) (+ [hands-on lab](kubernetes/labs/21-pods-replicasets-workload-controllers-lab.md), [cheat sheet](kubernetes/cheat-sheets/21-pods-replicasets-workload-controllers-cheatsheet.md))
 - [x] 22 — [Deployments and Rollout Strategies](kubernetes/22-deployments-rollout-strategies.md) (+ [hands-on lab](kubernetes/labs/22-deployments-rollout-strategies-lab.md), [cheat sheet](kubernetes/cheat-sheets/22-deployments-rollout-strategies-cheatsheet.md))
+- [x] 23 — [Services, Ingress & Gateway API](kubernetes/23-services-ingress-gateway-api.md) (+ [hands-on lab](kubernetes/labs/23-services-ingress-gateway-api-lab.md), [cheat sheet](kubernetes/cheat-sheets/23-services-ingress-gateway-api-cheatsheet.md))
 
 ---
 
