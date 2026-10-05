@@ -157,3 +157,95 @@ spec:
 "TLS misconfig is the other classic: the Secret in the wrong namespace, or cert-manager annotations missing so the cert never gets issued. And on managed clusters, people forget the controller itself needs a LoadBalancer Service or there's no public IP at all."
 
 **Key Point:** "Most broken Ingresses are one of four things: no controller, wrong class, backend pointing at nothing, or the TLS Secret in the wrong place."
+
+---
+
+## Gateway API
+
+### Q10: What is the Gateway API and how is it different from Ingress?
+
+**How to Answer:**
+
+"The Gateway API is the next-generation replacement for Ingress — it's a set of CRDs that fixes Ingress's biggest weaknesses: everything is annotation-driven, there's only one rewrite model, and there's no clean way to share routing across teams."
+
+"The big philosophical shift is role separation: infra teams own the Gateway, app teams own their Routes. With Ingress, everyone fights over the same annotations on one object. Gateway API is also designed for more than HTTP from day one — TCP, UDP, TLS, and mesh use cases are first-class."
+
+**Key Point:** "Gateway API replaces annotation soup with structured, role-separated routing — infra owns the Gateway, app teams attach their own Routes."
+
+---
+
+### Q11: How do GatewayClass, Gateway and HTTPRoute split responsibilities?
+
+**How to Answer:**
+
+"GatewayClass is the template — it says which controller implementation backs things, like 'istio' or the cloud provider's Gateway. The Gateway is the actual listener config: which ports, which hostnames, what TLS certificates — that's owned by the platform or infra team."
+
+"HTTPRoute is where app teams live: it attaches to a Gateway and declares path and header matching plus which backend Service gets the traffic. So infra provisions one Gateway per environment, and each team self-serves their own routing without touching anyone else's config."
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: api-route
+spec:
+  parentRefs:
+  - name: prod-gateway
+  rules:
+  - matches:
+    - path: {type: PathPrefix, value: /api}
+    backendRefs:
+    - name: api-svc
+      port: 80
+```
+
+**Key Point:** "GatewayClass picks the implementation, Gateway owns the listeners, HTTPRoute owns the app's routing — clean separation of concerns."
+
+---
+
+### Q12: Would you still use Ingress on a new cluster today?
+
+**How to Answer:**
+
+"Honestly, for a greenfield cluster I'd reach for the Gateway API — it's GA, the major controllers support it, and the role separation saves real pain as teams grow. Ingress is effectively frozen: no major new features are landing."
+
+"But I'd still be pragmatic — if the team already knows Ingress, the controllers are running fine, and the routing needs are simple, ripping it out buys you nothing. The interview-safe answer is: Gateway API for new builds, Ingress is fine to keep where it already works."
+
+**Key Point:** "Gateway API for greenfield, keep Ingress where it already works — it's stable, just not evolving."
+
+---
+
+## Networking Troubleshooting
+
+### Q13: Your Service returns connection refused — how do you debug it?
+
+**How to Answer:**
+
+"I start at the Endpoints, not the Service — `kubectl get endpoints <svc>` tells me immediately whether any Pod is actually registered. Empty Endpoints means the selector doesn't match, which is the most common cause by far."
+
+"If Endpoints are populated, I check the Pod itself: is the container actually listening on that port, did the readiness probe fail, is the app crashing? Then I `kubectl port-forward` to the Pod to test it directly — if that works but the Service doesn't, the problem is in the Service or kube-proxy layer."
+
+**Key Point:** "Check Endpoints first — empty Endpoints means a selector mismatch; populated Endpoints means the problem is in the Pod or the proxy layer."
+
+---
+
+### Q14: Your Ingress shows a 404 or the default backend — what's the checklist?
+
+**How to Answer:**
+
+"Default backend means the controller got the request but matched no rule, so I re-read my rules: host spelling, path and pathType, and whether the request actually hits the right hostname — people test with curl and forget the Host header."
+
+"Then I verify the backend Service exists with healthy Endpoints, and that the Ingress has the right `ingressClassName` for the controller that's actually installed. If TLS is involved, I check the Secret exists in the same namespace — that's a silent killer."
+
+**Key Point:** "A default-backend 404 is a routing miss — check host, path, class, backend Endpoints, then the TLS Secret."
+
+---
+
+### Q15: Traffic is uneven across Pods or sessions keep dropping — what do you check?
+
+**How to Answer:**
+
+"First suspect is usually `sessionAffinity: ClientIP` someone set for sticky sessions, or long-lived connections — kube-proxy balances connections, not requests, so one gRPC connection pins to one Pod forever. That's a classic 'my load balancer isn't balancing' interview trap."
+
+"For session drops I check `externalTrafficPolicy`: the default Cluster mode SNATs everything so the Pod never sees the real client IP, which breaks IP-based rate limiting and session affinity. Switching to Local preserves the client IP but only routes to nodes that actually run the Pod."
+
+**Key Point:** "kube-proxy balances connections, not requests — and SNAT hides client IPs unless you set externalTrafficPolicy to Local."
