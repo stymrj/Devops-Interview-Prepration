@@ -12,7 +12,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 2 | [Git & Version Control](version-control/) | 4/4 |
 | 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | 4/4 |
 | 4 | [Containers (Docker)](containers/) | 5/5 |
-| 5 | [Kubernetes](kubernetes/) | 6/8 |
+| 5 | [Kubernetes](kubernetes/) | 7/8 |
 | 6 | [CI/CD](ci-cd/) | ⬜ |
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | ⬜ |
 | 8 | [Cloud (AWS)](cloud-aws/) | ⬜ |
@@ -50,6 +50,7 @@ A new guide lands here every day. Progress so far:
 - [x] 23 — [Services, Ingress & Gateway API](kubernetes/23-services-ingress-gateway-api.md) (+ [hands-on lab](kubernetes/labs/23-services-ingress-gateway-api-lab.md), [cheat sheet](kubernetes/cheat-sheets/23-services-ingress-gateway-api-cheatsheet.md))
 - [x] 24 — [ConfigMaps, Secrets & Environment Management](kubernetes/24-configmaps-secrets-environment-management.md) (+ [hands-on lab](kubernetes/labs/24-configmaps-secrets-environment-management-lab.md), [cheat sheet](kubernetes/cheat-sheets/24-configmaps-secrets-environment-management-cheatsheet.md))
 - [x] 25 — [Persistent Storage in Kubernetes](kubernetes/25-persistent-storage-in-kubernetes.md) (+ [hands-on lab](kubernetes/labs/25-persistent-storage-in-kubernetes-lab.md), [cheat sheet](kubernetes/cheat-sheets/25-persistent-storage-in-kubernetes-cheatsheet.md))
+- [x] 26 — [Helm Charts](kubernetes/26-helm-charts.md) (+ [hands-on lab](kubernetes/labs/26-helm-charts-lab.md), [cheat sheet](kubernetes/cheat-sheets/26-helm-charts-cheatsheet.md))
 
 ---
 
