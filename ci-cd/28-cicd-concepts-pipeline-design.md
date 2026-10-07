@@ -93,4 +93,86 @@ docker build -t myapp:$(git rev-parse --short HEAD) .
 
 ---
 
-<!-- PART 2 CONTINUES BELOW -->
+## Deploying Safely
+
+### Q8: How do you gate deployments between environments?
+
+**How to Answer:**
+
+"Between environments you put quality gates — automated checks that have to pass before promotion happens. That means all tests green, no critical CVEs from the image scan, and sometimes a performance baseline check. For production I usually add a manual approval step too, especially in regulated teams — automation handles the how, a human owns the when. Approvals should be tied to a specific person or role with a timeout, not an open button anyone can click. And the gate history matters: in an incident, the first question is always 'what changed?', and your pipeline should answer that instantly."
+
+**Key Point:** "Automated quality gates between environments, manual approval for prod — and keep the audit trail."
+
+---
+
+### Q9: How do you handle rollbacks when a deploy goes wrong?
+
+**How to Answer:**
+
+"A rollback should be a first-class operation, not a panic redeploy. With blue-green or rolling strategies, you just switch traffic back to the previous version — that's why keeping the old version warm matters. In Kubernetes, `kubectl rollout undo` reverts a Deployment to the previous ReplicaSet in seconds. The key design point: rollbacks must not rebuild anything — you redeploy the exact previous artifact, which you only have if you kept it immutable and tagged. And database migrations are the real trap — rolling back code is easy, rolling back a schema change is not, so make migrations backward-compatible with expand-then-contract patterns."
+
+```bash
+# Roll back a deployment to the previous revision
+kubectl rollout undo deployment/myapp
+```
+
+**Key Point:** "Redeploy the previous immutable artifact — never rebuild — and make schema migrations backward-compatible."
+
+---
+
+### Q10: Where do different types of tests belong in a pipeline?
+
+**How to Answer:**
+
+"Fast, cheap tests run early — unit tests and linting in the first stage, because they catch the most common mistakes in seconds. Integration tests come next, running against real-ish dependencies like a test database or localstack. Contract tests sit between services so a breaking API change fails the build before it hits staging. End-to-end tests go last, usually after deploying to staging, because they're slow and flaky by nature. The pyramid guides everything: lots of unit tests, fewer integration tests, very few E2E — and E2E tests that flake get quarantined or deleted, because a red pipeline everyone ignores is worse than no pipeline."
+
+**Key Point:** "Fast tests first, E2E last in staging — and never let flaky tests train people to ignore red builds."
+
+---
+
+### Q11: Push-based versus pull-based deployment — what's the difference?
+
+**How to Answer:**
+
+"In push-based deployment, the CI server pushes the new version into the cluster or server — Jenkins SSHing into boxes or running `kubectl apply`. It's simple, but the pipeline needs direct credentials to production, which is a wide attack surface. Pull-based flips it: an agent inside the environment, like ArgoCD, watches a Git repo and pulls changes when the desired state drifts. That's the GitOps model — git is the single source of truth, and production credentials never leave the cluster. Pull-based is more secure and self-healing, which is why it's the standard for Kubernetes. Push still shows up for serverless or VM-based setups where there's no in-cluster agent."
+
+**Key Point:** "Push: CI writes into prod. Pull (GitOps): an agent inside the environment syncs git's desired state."
+
+---
+
+## Speed and Reliability
+
+### Q12: How do you make pipelines faster without losing reliability?
+
+**How to Answer:**
+
+"First, cache aggressively — dependencies, Docker layers, build outputs — but invalidate on lockfile or Dockerfile changes so the cache can't hide a broken build. Then parallelize: split tests into shards or run independent stages concurrently instead of one long serial chain. Use smaller runner images and the right-sized runners, because a 4GB base image and an underpowered runner waste minutes every run. And only run what's needed — path filters so a docs change doesn't trigger the full integration suite. The trap to avoid is over-caching: a green pipeline that passes because of stale cache is lying to you."
+
+**Key Point:** "Cache dependencies and layers, parallelize independent stages, and skip work that the change doesn't need."
+
+---
+
+### Q13: How do you debug a pipeline that keeps failing?
+
+**How to Answer:**
+
+"I start by reproducing locally — if the pipeline runs tests in Docker, I run the same container and command on my machine. Then I check whether the failure is deterministic: if it passes on retry with no changes, it's flaky, and flaky tests get quarantined before they erode trust. Environment drift is the usual suspect — a runner with a different base image or an expired credential. I also look at what changed recently in the pipeline definition itself, because half of 'broken builds' are actually someone's YAML edit. And I keep pipeline logs structured and searchable, because grepping 2000 lines of raw logs in an incident is how you waste an hour."
+
+**Key Point:** "Reproduce locally, separate flaky from deterministic, check the pipeline's own recent changes, keep logs searchable."
+
+---
+
+## Security
+
+### Q14: How do you secure a CI/CD pipeline against supply-chain attacks?
+
+**How to Answer:**
+
+"The pipeline is production's front door, so treat it like one. Pin all actions and dependencies to specific SHAs or versions — a floating `latest` tag on a GitHub Action is an invitation for a compromise. Scan everything: source code with SAST, dependencies for known CVEs, and container images before they can be promoted. Sign artifacts with something like cosign so downstream knows the image actually came from your pipeline. And lock down who can change the pipeline itself — branch protection on the workflow files and required reviews, because whoever controls the pipeline controls what ships to prod."
+
+**Key Point:** "Pin dependencies, scan code and images, sign artifacts, and protect the pipeline definition like production code."
+
+---
+
+*Day 28 of 58 — written for DevOps & SRE interviews at 1-3 YOE.*
+
