@@ -112,3 +112,98 @@ kubectl get endpoints web-svc
 ```
 
 **Key Point:** "502s are backend reachability — verify endpoints exist, probes pass, and the ingress port mapping matches."
+---
+
+## Node and Resource Problems
+
+### Q7: A pod keeps getting OOMKilled. What's your process?
+
+**How to Answer:**
+
+"Exit code 137 with reason OOMKilled means the container exceeded its memory limit — the kernel killed it, not the app. First I confirm with `kubectl describe pod` and look at the last state. Then I check whether the limit is actually realistic or whether the app has a memory leak."
+
+"The quick fix is raising the memory limit, but I always ask why it died first. If memory grows linearly until the kill, that's a leak and a bigger limit just delays it. If it dies on traffic spikes, the limit was too tight for the workload."
+
+"Long-term, I set proper requests and limits — requests for scheduling, limits for protection — and alert on memory usage approaching the limit so we catch it before the kill. VerticalPodAutoscaler recommendations help size this over time."
+
+**Key Point:** "137 means the kernel killed you — distinguish a leak from an undersized limit before you raise it."
+
+---
+
+### Q8: Pods are getting evicted and nodes show disk or memory pressure. What do you do?
+
+**How to Answer:**
+
+"Node pressure eviction is kubelet protecting the node — when disk or memory crosses thresholds, it starts killing pods, lowest priority and QoS first. `kubectl describe node` shows the pressure conditions clearly, so I confirm which resource is the problem."
+
+"For disk pressure, the usual culprits are runaway logs filling the disk or old container images. I clean up unused images and check whether log rotation is configured. For memory pressure, I look for pods without limits — a pod with no memory limit can eat everything and trigger eviction of its neighbors."
+
+"Best-effort pods die first in evictions, so setting requests and limits isn't optional in production. After stabilizing, I add node-level alerting on pressure conditions and make sure the node has enough headroom."
+
+```bash
+kubectl describe node worker-1 | grep -A 3 "Conditions:"
+```
+
+**Key Point:** "Eviction is kubelet defending the node — find which resource is pressured, then give every pod proper requests and limits."
+
+---
+
+### Q9: The whole cluster is misbehaving — how do you check control plane health?
+
+**How to Answer:**
+
+"I work top-down: API server first, then etcd, then scheduler and controller-manager. `kubectl get componentstatuses` is the quick check on older clusters, but on modern managed clusters I look at the control plane metrics and logs instead — you don't always have direct access."
+
+"On self-hosted clusters I check etcd health directly — etcd quorum loss is the scariest cluster failure, and it usually comes from disk latency or a full disk on the etcd members. `etcdctl endpoint health` tells the story fast."
+
+"For managed clusters like EKS or GKE, control plane issues are usually exposed through the cloud provider's status and the API server's request latency metrics. I also keep an eye on leader election — a scheduler that lost its lease just stops scheduling while everything else looks fine."
+
+**Key Point:** "Top-down: API server, then etcd quorum, then scheduler and controller-manager — etcd disk issues are the classic silent killer."
+
+---
+
+### Q10: A deployment is stuck mid-rollout. How do you recover?
+
+**How to Answer:**
+
+"`kubectl rollout status` shows where it stopped, and `kubectl describe deployment` tells me why — usually the new ReplicaSet's pods never became ready. Bad image tag, failed probes, or a config error in the new version are the usual causes."
+
+"First decision: roll forward or roll back. If I know the fix and it's small, I fix and push a new revision. If I'm unsure, I roll back — `kubectl rollout undo` restores the last good ReplicaSet in seconds, and arguing with a broken rollout during an incident is how outages get longer."
+
+"To prevent repeats, I set `progressDeadlineSeconds` so a stuck rollout fails loudly instead of hanging forever, and I always test the new image's health endpoint in a lower environment before promoting it."
+
+**Key Point:** "When in doubt, roll back first and diagnose later — a working old version beats a debated new one."
+
+---
+
+## Incident Triage Methodology
+
+### Q11: Production is down and everyone's looking at you. What's your triage process?
+
+**How to Answer:**
+
+"I go wide to narrow. First: what's the blast radius — which services, which namespaces, is it one pod or the whole cluster? Then I check the recent change — in my experience most incidents follow a deploy, a config change, or an infra change within the last hour."
+
+"Then I layer: pod health first (`kubectl get pods -A` sorted by restarts), then nodes, then ingress and DNS, then external dependencies. I fix or mitigate before I fully understand — scale up, roll back, drain a bad node — and do the deep root-cause after the bleeding stops."
+
+"Throughout, I keep one person on comms and one timeline. The biggest incident mistakes I've seen are five people running the same kubectl command and nobody writing down what changed when."
+
+**Key Point:** "Blast radius, then recent changes, then layer-by-layer — mitigate first, root-cause second, and keep a timeline."
+
+---
+
+### Q12: What tools do you keep ready for deep debugging in Kubernetes?
+
+**How to Answer:**
+
+"kubectl alone covers most of it — logs, describe, exec, port-forward, and rollout commands are my daily drivers. For pods I can't exec into because they're distroless or crashed, I use `kubectl debug` with an ephemeral container to attach a debugging toolbox to the running pod."
+
+"I keep a debug image handy — something like netshoot — for network issues: it has dig, curl, tcpdump, everything the stripped-down app image lacks. For node-level problems I use `kubectl debug node/` to get a shell on the node without SSH."
+
+"Beyond kubectl, I rely on the observability stack we covered in earlier guides — Prometheus metrics to see what changed, and centralized logs to correlate across pods. The interview point is: debugging tools find the symptom, but metrics and logs find the cause."
+
+```bash
+kubectl debug -it myapp-abc123 --image=nicolaka/netshoot --target=myapp
+```
+
+**Key Point:** "Ephemeral debug containers plus a netshoot-style toolbox — you can debug any pod without rebuilding its image."
