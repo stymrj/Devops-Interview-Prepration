@@ -108,3 +108,109 @@ deploy:
 "Artifacts pass files between jobs or keep them after a run — build outputs, test reports, deployment packages. You upload with `actions/upload-artifact` and download with `actions/download-artifact`. Caching is different: it's for dependencies like npm modules or pip packages to speed up runs, using `actions/cache` or the built-in cache in setup actions. The rule of thumb: artifacts carry build outputs downstream; caches carry dependencies to make the same job faster next time. And caches are immutable by key — if the key matches, you get the old cache, so I always key on the lockfile hash."
 
 **Key Point:** "Artifacts move build outputs between jobs; caches speed up repeated dependency installs and are keyed on lockfile hashes."
+
+---
+
+## Secrets, Variables and Security
+
+### Q8: How do secrets and variables work in GitHub Actions?
+
+**How to Answer:**
+
+"Secrets are encrypted values — API keys, tokens, cloud credentials — referenced as `${{ secrets.DB_PASSWORD }}` and never shown in logs; GitHub masks them automatically. Variables are plain config via `${{ vars.ENV_NAME }}`, visible in logs. You scope both at repo, environment, or org level, and environments can add required reviewers. The interview trap: secrets aren't available to workflows triggered by `pull_request` from forks by default — that blocks PRs from exfiltrating secrets. That's why fork PRs often need `pull_request_target`, used carefully."
+
+**Key Point:** "Secrets are encrypted and log-masked; variables are plain config. Fork PRs don't get secrets by default."
+
+---
+
+### Q9: What's OIDC, and why is it better than storing cloud credentials as secrets?
+
+**How to Answer:**
+
+"OIDC lets the workflow mint a short-lived token that the cloud provider trusts — no long-lived AWS keys sitting in GitHub secrets. You add `permissions: id-token: write`, the runner gets a JWT from GitHub, and AWS IAM validates it against an identity provider you registered. If the workflow finishes, the token dies. I prefer it because leaked static keys are how breaches happen — with OIDC there's nothing to leak or rotate. Interviewers love this question because it's the modern answer to 'how do you deploy from CI securely'."
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+- uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: arn:aws:iam::123456789012:role/github-deploy
+```
+
+**Key Point:** "OIDC mints short-lived cloud tokens per run — no static keys to leak, rotate, or steal."
+
+---
+
+### Q10: How do environments and deployment protection rules work?
+
+**How to Answer:**
+
+"Environments like `staging` and `production` are named targets you attach to jobs with `environment: production`. Each environment can have its own secrets, required reviewers, and wait timers — so production deploys need a human approval while staging auto-deploys. You can also restrict which branches can deploy to an environment. The pattern I use: staging deploys on every main push automatically, production needs a reviewer click. Interviewers want to hear that environments are your blast-radius control, not just labels."
+
+**Key Point:** "Environments bundle secrets, reviewer approvals, and branch rules — they're your blast-radius control for deploys."
+
+---
+
+## Expressions, Matrix and Reusable Workflows
+
+### Q11: What are contexts and expressions? Give me a real example.
+
+**How to Answer:**
+
+"Contexts are objects GitHub injects — `github`, `env`, `secrets`, `matrix`, `steps` — and expressions `${{ ... }}` evaluate them. A real example: `${{ github.event_name == 'pull_request' && 'preview' || 'prod' }}` to pick a deploy target. Another: `${{ steps.build.outputs.image }}` to grab a step's output. The trap is forgetting that expressions in `if:` don't need the `${{ }}` wrapper — `if: github.ref == 'refs/heads/main'` works, wrapping it is harmless but redundant. Short-circuit logic in expressions is how you write branch-free conditional values."
+
+**Key Point:** "Contexts like github, env, and matrix feed `${{ }}` expressions — they're how workflows stay branch-free and data-driven."
+
+---
+
+### Q12: How do matrix builds work, and what's the include/exclude trick?
+
+**How to Answer:**
+
+"A matrix fans one job out into many — say Node 18, 20, 22 across ubuntu and windows — so you test combinations without copy-pasting jobs. You write `strategy: matrix: node: [18, 20, 22]`, and reference `${{ matrix.node }}` in steps. `include` adds one-off combos like an experimental Node 23 on ubuntu only; `exclude` drops broken combos like a version that doesn't support windows. Add `fail-fast: false` so one failing combo doesn't kill the whole matrix. Interviewers ask this to check whether you've actually tested across versions or just run one happy path."
+
+```yaml
+strategy:
+  fail-fast: false
+  matrix:
+    node: [18, 20, 22]
+    os: [ubuntu-latest, windows-latest]
+    exclude:
+      - node: 22
+        os: windows-latest
+```
+
+**Key Point:** "Matrix fans a job across version/OS combos; include and exclude fine-tune the grid, fail-fast: false keeps one bad combo from killing all."
+
+---
+
+### Q13: How do reusable workflows and composite actions reduce duplication?
+
+**How to Answer:**
+
+"Reusable workflows let you extract a whole job set — say a standard 'build, test, scan' pipeline — into one file triggered with `on: workflow_call`, then other repos call it with `uses: org/repo/.github/workflows/ci.yml@main`. Composite actions are smaller: a bundle of steps you call inside a job, like a custom 'setup my toolchain' step. Rule of thumb: composite action for shared steps, reusable workflow for shared pipelines. The governance win: update the deploy pipeline once and every repo inherits it. That's how platform teams keep hundreds of repos consistent."
+
+**Key Point:** "Composite actions share steps; reusable workflows share whole pipelines — update once, every repo inherits."
+
+---
+
+## Troubleshooting and Best Practices
+
+### Q14: A workflow is failing — how do you debug it?
+
+**How to Answer:**
+
+"First I re-run with debug logging enabled — set the `ACTIONS_STEP_DEBUG` secret to true for verbose step output. Then I check the obvious: did `actions/checkout` actually run, are secrets present (a masked empty secret fails silently), is the `if:` condition evaluating the way I think. For step outputs I `echo` values into `$GITHUB_OUTPUT` and print them. If it's flaky, I check runner image updates — `ubuntu-latest` moves and breaks things. And for really stubborn cases, I reproduce locally with `act` or nektos/act to run the workflow on my machine. The fastest wins are usually a wrong context name or a secret that doesn't exist."
+
+**Key Point:** "Enable step-debug logging, verify checkout and secrets first, reproduce locally with act for stubborn failures."
+
+---
+
+### Q15: What are your non-negotiable GitHub Actions best practices?
+
+**How to Answer:**
+
+"Pin every third-party action to a full commit SHA, not just `@v4` — tags can be moved, SHAs can't. Give each job minimal `permissions:` instead of the default broad token. Never run untrusted code with write permissions — fork PRs get read-only and no secrets. Cache dependencies keyed on lockfiles, and use concurrency groups to cancel superseded runs so pushes don't queue up. And keep workflows small: extract shared logic into reusable workflows so a security fix lands everywhere at once. These are the answers that signal you've operated Actions at scale, not just written one tutorial workflow."
+
+**Key Point:** "Pin actions to SHAs, least-privilege permissions, concurrency to cancel stale runs, and extract shared logic into reusable workflows."
