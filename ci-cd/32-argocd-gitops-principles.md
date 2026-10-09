@@ -104,3 +104,86 @@ spec:
 **Key Point:** "Sync status = Git vs live match; health = actual runtime state — an app can be Synced yet Degraded."
 
 ---
+
+## Applications and Sync
+
+### Q8: Explain sync — manual vs automated, and what sync waves do.
+
+**How to Answer:**
+
+"By default ArgoCD syncs manually — you click sync in the UI or run `argocd app sync`. Automated sync means it applies Git changes on their own, optionally with prune (delete resources removed from Git) and self-heal (revert manual kubectl edits). Sync waves control ordering — annotate resources with `argocd.argoproj.io/sync-wave: "-1"` and lower waves apply first, so your namespace and CRDs land before the Deployment that needs them. The gotcha: automated sync with prune is powerful but dangerous — one bad delete commit wipes things without a human in the loop."
+
+**Key Point:** "Manual = human triggers; automated = Git changes apply themselves (prune + self-heal); sync waves order resource application."
+
+---
+
+### Q9: How does ArgoCD handle drift between Git and the live cluster?
+
+**How to Answer:**
+
+"Every few minutes the application controller compares the manifests from Git against the live cluster state, and any difference flags the app OutOfSync. If self-heal is on, it fixes the drift automatically — reverts your manual `kubectl edit` back to the Git state. Without self-heal, it just reports and waits. This is also how you catch sneaky problems: operators like cert-manager or HPA mutate resources constantly, so you learn to add `ignoreDifferences` to the Application spec for fields that legitimately change at runtime. I always mention HPA replicas in interviews — that's the classic false-drift example."
+
+```yaml
+spec:
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas   # HPA owns this, not Git
+```
+
+**Key Point:** "Drift = Git vs live mismatch; self-heal auto-corrects; ignoreDifferences silences legitimate runtime mutations like HPA replicas."
+
+---
+
+### Q10: How do you manage secrets in a GitOps workflow?
+
+**How to Answer:**
+
+"You never commit plaintext secrets — GitOps repos are often readable, and Git history never forgets. The two mainstream answers: Sealed Secrets, where you encrypt secrets into SealedSecret manifests that only the in-cluster controller can decrypt; or External Secrets Operator, where Git holds a reference and the operator fetches the real value from Vault or AWS Secrets Manager at sync time. I prefer External Secrets for real setups — rotation happens in the vault, not in Git, so you're not re-encrypting and committing every rotation. The interview trap is saying 'we use SOPS' without explaining who decrypts — with SOPS the repo server needs the decryption key, which is its own secret-management problem."
+
+**Key Point:** "No plaintext in Git — Sealed Secrets (encrypted, decrypted in-cluster) or External Secrets (Git holds a reference, vault holds the value)."
+
+---
+
+## Advanced ArgoCD Patterns
+
+### Q11: How do you promote a new image version from dev to staging to prod?
+
+**How to Answer:**
+
+"The GitOps-pure way: CI builds the image, then updates the image tag in the staging Git path — ArgoCD syncs it automatically. For prod, you open a PR against the prod path — a human reviews and merges, and that's your change control. In practice I use ArgoCD Image Updater: it watches registries, and when a new tag matching your semver rule appears, it writes the tag back to Git and commits. The trap to avoid is `:latest` tags — they're undebuggable and ArgoCD can't tell when they change, so pin digest or semver tags. Image promotion in GitOps is really Git promotion — the image just follows the commit."
+
+**Key Point:** "CI or Image Updater writes the new tag to Git per environment; prod promotion is a reviewed PR — promotion is Git promotion."
+
+---
+
+### Q12: What are multi-cluster and App of Apps patterns?
+
+**How to Answer:**
+
+"ArgoCD can manage many clusters from one control plane — you register each cluster with `argocd cluster add` and point Applications at different destination servers. App of Apps is the bootstrapping trick: one root Application whose Git path contains other Application manifests, so a fresh cluster gets its whole ArgoCD fleet by syncing one app. I combine both: the management cluster runs ArgoCD with an App of Apps per environment, and each environment's apps land in the right cluster. The scaling concern is real — one controller watching dozens of clusters gets heavy, so you shard controllers or run ArgoCD per environment at real scale."
+
+**Key Point:** "One ArgoCD can drive many registered clusters; App of Apps bootstraps a whole fleet from a single root Application."
+
+---
+
+## Troubleshooting and Best Practices
+
+### Q13: An ArgoCD app shows OutOfSync but nothing actually changed — how do you debug?
+
+**How to Answer:**
+
+"First I open the app diff in the UI — ArgoCD shows exactly which resource and field differs, and nine times out of ten it's a mutating webhook or controller adding defaults, like a service mesh injecting sidecar annotations. If the diff is noise, I add `ignoreDifferences` for that field. If the app won't sync at all, I check the sync operation logs and the repo server — stale cache or a bad Helm values file are the usual suspects, and `argocd app get --hard-refresh` clears the cache. The one people miss: `argocd app diff` from the CLI gives you the same comparison without clicking around the UI."
+
+**Key Point:** "Check the UI diff first — it's usually a webhook adding fields (add ignoreDifferences); for stuck syncs, check repo-server cache and sync logs."
+
+---
+
+### Q14: How do you secure and scale ArgoCD itself?
+
+**How to Answer:**
+
+"Security first: SSO via OIDC or Dex for login, RBAC with Projects scoping which repos and clusters each team can touch, and network policies limiting who reaches the API server. Never run the admin account in daily use — disable it or rotate the password into a vault. For scale: the application controller is the bottleneck, so enable sharding by cluster, bump the repo server's cache, and run HA with multiple controller replicas. I've seen teams skip Projects and give everyone default access — then one team's bad Application wipes another team's namespace, so project-scoped RBAC is the first thing I set up."
+
+**Key Point:** "SSO + RBAC Projects for security, controller sharding + repo-server caching for scale; never share the admin account."
