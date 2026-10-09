@@ -119,3 +119,97 @@ deploy-review:
 ```
 
 **Key Point:** "Environments track deployments per target; review apps are dynamic per-MR environments that need a stop job to clean up."
+
+---
+
+## Rules Workflows and Advanced Patterns
+
+### Q8: `rules:` vs `only:`/`except:` — what's the difference?
+
+**How to Answer:**
+
+"`rules:` is the modern way to control when jobs run, and it's what I use everywhere. It's a list of conditions evaluated top-down — the first match wins — and each rule can attach `changes:`, `exists:`, variables, or `when:` behaviors. `only:`/`except:` is the legacy syntax; it can't do things like `if:` with regex on variables combined with file changes in one clean expression. The one migration trap: mixing `rules` and `only` in the same job is an error, so pick one per job."
+
+```yaml
+deploy-prod:
+  stage: deploy
+  script: ./deploy.sh prod
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+      changes: [src/**/*]
+```
+
+**Key Point:** "rules is the modern, top-down, first-match syntax — don't mix it with legacy only/except in the same job."
+
+---
+
+### Q9: How do you reuse pipeline config — `extends`, `!reference`, `include`?
+
+**How to Answer:**
+
+"Three tools, different jobs. `include:` pulls in external YAML — local files, other projects, remote URLs, or template components — so teams share standard jobs. `extends:` is inheritance: a job copies another job's keys and overrides what it needs, great for a base job with common `before_script`. `!reference` is surgical — it grabs one specific key's content, like reusing just a `script:` block without inheriting the rest. The trap with extends: it's multi-level and the merge is silent, so overusing it turns the pipeline into a puzzle nobody can trace."
+
+**Key Point:** "include pulls in files, extends inherits whole jobs, !reference reuses a single key — keep inheritance shallow so pipelines stay traceable."
+
+---
+
+### Q10: What are parent-child and multi-project pipelines?
+
+**How to Answer:**
+
+"A child pipeline is triggered from a parent via `trigger: include:` — the parent kicks off a separate pipeline defined in another YAML file, and it shows up nested in the parent's graph. I use it to split a monorepo: each service gets its own child pipeline with its own rules. Multi-project pipelines cross repo boundaries with `trigger: project:` — like the app repo triggering the infra repo's deploy pipeline. The security note: downstream triggers respect the triggering user's permissions, so a dev can't trigger a deploy they couldn't run manually."
+
+**Key Point:** "Child pipelines split one repo's work via trigger:include; multi-project pipelines trigger other repos via trigger:project — both respect the triggerer's permissions."
+
+---
+
+### Q11: What is `needs:`, and how does it change pipeline behavior?
+
+**How to Answer:**
+
+"`needs:` creates a directed acyclic graph — a job can start as soon as the specific jobs it needs finish, without waiting for the whole stage. That breaks the strict stage ordering and can cut pipeline time dramatically. But it changes failure semantics: with `needs:`, a job runs even if *unrelated* jobs in earlier stages failed, because the stage gate is bypassed. So for deploys I'd rather keep strict stages — I want the full green before anything ships. Use needs for speed on build/test fan-out, keep stages as gates for deploys."
+
+```yaml
+integration-tests:
+  stage: test
+  needs: [build-app]
+  script: ./run-integration.sh
+```
+
+**Key Point:** "needs builds a DAG for faster parallel execution, but it bypasses stage gates — keep deploys behind strict stages."
+
+---
+
+## Troubleshooting and Best Practices
+
+### Q12: Your pipeline takes 40 minutes — how do you speed it up?
+
+**How to Answer:**
+
+"First I'd check the pipeline graph to find the long pole — usually it's sequential stages that don't need to be. I'd add `needs:` to break fake stage dependencies and run independent jobs in parallel. Then caching: dependency dirs, Docker layer caching, or pre-built base images instead of `apt-get install` every run. And I'd question what runs at all — `rules: changes:` so docs edits don't trigger full test suites. Real number from experience: just splitting tests into parallel jobs and caching dependencies usually cuts 30 to 50 percent."
+
+**Key Point:** "Find the long pole, parallelize with needs, cache dependencies, and skip irrelevant jobs with rules: changes:."
+
+---
+
+### Q13: How do you debug a failing pipeline job?
+
+**How to Answer:**
+
+"I start with the job log and expand the collapsed sections — the actual error is usually above the last red line. If it's environment-specific, I check which Runner and image it ran on, because 'works on my branch' is often a different image tag or a stale cache. For interactive debugging I'd reproduce locally with the same Docker image, or use `gitlab-runner exec` for shell runners. And if a flaky test is the cause, I check whether it's marked `allow_failure` — flaky jobs that block the pipeline are a process problem, not a test problem."
+
+**Key Point:** "Read the full log, verify the Runner and image, reproduce locally with the same image — and treat flaky blockers as a process problem."
+
+---
+
+### Q14: How do you secure a GitLab CI/CD pipeline?
+
+**How to Answer:**
+
+"Layers. Protected branches so only maintainers can push to main, and protected variables so secrets only inject there. Required approvals on merge requests plus pipeline must-succeed settings so nothing merges red. For deployments I'd use OpenID Connect to assume cloud roles — no long-lived AWS keys sitting in variables. And I'd audit `include:` sources and pinned versions, because a compromised remote template is a supply-chain attack. The principle is simple: the pipeline has production access, so treat `.gitlab-ci.yml` changes like production code changes."
+
+**Key Point:** "Protected branches plus protected variables, OIDC instead of long-lived keys, required approvals, and treat pipeline YAML as production code."
+
+---
+
+**Day 31 of 58 complete.** Next: ArgoCD & GitOps principles.
