@@ -13,7 +13,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 3 | [Core Concepts (DevOps/SRE)](core-concepts/) | 4/4 |
 | 4 | [Containers (Docker)](containers/) | 5/5 |
 | 5 | [Kubernetes](kubernetes/) | 8/8 |
-| 6 | [CI/CD](ci-cd/) | 3/5 |
+| 6 | [CI/CD](ci-cd/) | 4/5 |
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | ⬜ |
 | 8 | [Cloud (AWS)](cloud-aws/) | ⬜ |
 | 9 | [Monitoring & Logging](monitoring-logging/) | ⬜ |
@@ -55,6 +55,7 @@ A new guide lands here every day. Progress so far:
 - [x] 28 — [CI/CD Concepts & Pipeline Design](ci-cd/28-cicd-concepts-pipeline-design.md) (+ [hands-on lab](ci-cd/labs/28-cicd-concepts-lab.md), [cheat sheet](ci-cd/cheat-sheets/28-cicd-concepts-cheatsheet.md))
 - [x] 29 — [Jenkins: Pipelines, Agents & Shared Libraries](ci-cd/29-jenkins-pipelines-agents-shared-libraries.md) (+ [hands-on lab](ci-cd/labs/29-jenkins-lab.md), [cheat sheet](ci-cd/cheat-sheets/29-jenkins-cheatsheet.md))
 - [x] 30 — [GitHub Actions](ci-cd/30-github-actions.md) (+ [hands-on lab](ci-cd/labs/30-github-actions-lab.md), [cheat sheet](ci-cd/cheat-sheets/30-github-actions-cheatsheet.md))
+- [x] 31 — [GitLab CI](ci-cd/31-gitlab-ci.md) (+ [hands-on lab](ci-cd/labs/31-gitlab-ci-lab.md), [cheat sheet](ci-cd/cheat-sheets/31-gitlab-ci-cheatsheet.md))
 
 ---
 
