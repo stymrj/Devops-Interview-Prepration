@@ -14,7 +14,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 4 | [Containers (Docker)](containers/) | 5/5 |
 | 5 | [Kubernetes](kubernetes/) | 8/8 |
 | 6 | [CI/CD](ci-cd/) | 5/5 |
-| 7 | [Infrastructure as Code](infrastructure-as-code/) | ⬜ |
+| 7 | [Infrastructure as Code](infrastructure-as-code/) | 1/5 |
 | 8 | [Cloud (AWS)](cloud-aws/) | ⬜ |
 | 9 | [Monitoring & Logging](monitoring-logging/) | ⬜ |
 | 10 | [Networking & Security](networking-security/) | ⬜ |
@@ -57,6 +57,8 @@ A new guide lands here every day. Progress so far:
 - [x] 30 — [GitHub Actions](ci-cd/30-github-actions.md) (+ [hands-on lab](ci-cd/labs/30-github-actions-lab.md), [cheat sheet](ci-cd/cheat-sheets/30-github-actions-cheatsheet.md))
 - [x] 31 — [GitLab CI](ci-cd/31-gitlab-ci.md) (+ [hands-on lab](ci-cd/labs/31-gitlab-ci-lab.md), [cheat sheet](ci-cd/cheat-sheets/31-gitlab-ci-cheatsheet.md))
 - [x] 32 — [ArgoCD & GitOps Principles](ci-cd/32-argocd-gitops-principles.md) (+ [hands-on lab](ci-cd/labs/32-argocd-gitops-principles-lab.md), [cheat sheet](ci-cd/cheat-sheets/32-argocd-gitops-principles-cheatsheet.md))
+
+- [x] 33 — [Terraform Basics](infrastructure-as-code/33-terraform-basics.md) (+ [hands-on lab](infrastructure-as-code/labs/33-terraform-basics-lab.md), [cheat sheet](infrastructure-as-code/cheat-sheets/33-terraform-basics-cheatsheet.md))
 
 ---
 
