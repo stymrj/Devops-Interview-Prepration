@@ -147,3 +147,105 @@ keyed_groups:
 **Key Point:** "Extra vars beat everything; precedence goes host, then group, then play."
 
 ---
+
+### Q9: How do you use Jinja2 templates in playbooks?
+
+**How to Answer:**
+
+"Jinja2 templates let me generate config files dynamically — the nginx.conf with the right worker count per server, the app config with the right DB host per environment. I write the file once with placeholders and loop variables, and Ansible renders it per host at deploy time. Loops and conditionals inside templates handle the variation. One template, every environment covered."
+
+```yaml
+# template: nginx.conf.j2
+upstream app { server {{ app_host }}:{{ app_port }}; }
+# task renders it with host-specific vars
+```
+
+**Key Point:** "Templates render per-host configs from one Jinja2 source."
+
+---
+
+## Roles and Reuse
+
+### Q10: What is an Ansible role, and why use one over a plain playbook?
+
+**How to Answer:**
+
+"A role is a packaged, reusable bundle of tasks, handlers, templates, files, and defaults in a standard directory layout. I use roles when the same logic — say installing and hardening nginx — needs to run across environments or projects. Playbooks then just list roles like a shopping list instead of duplicating tasks. Galaxy is the public registry where community roles live, but I mostly write my own."
+
+**Key Point:** "Roles package reusable automation; playbooks consume them."
+
+---
+
+### Q11: What does the standard role directory structure look like?
+
+**How to Answer:**
+
+"Every role has tasks/main.yml for the actual work, handlers/main.yml for triggered restarts, defaults/main.yml for overridable variables, and vars/main.yml for things that shouldn't change. Templates go in templates/, static files in files/, and meta/main.yml declares dependencies on other roles. defaults are the lowest-priority variables, so callers can always override them. This layout is a convention Ansible knows by heart."
+
+**Key Point:** "tasks, handlers, defaults, vars, templates, files — Ansible auto-loads them."
+
+---
+
+## Idempotency and Handlers
+
+### Q12: What does idempotent mean in Ansible, and why does it matter?
+
+**How to Answer:**
+
+"Idempotent means running a playbook ten times gives the same result as running it once — Ansible only changes what drifted. This matters because in production you rerun playbooks constantly: after failures, on schedules, after config changes. If modules weren't idempotent, every rerun would pile up duplicate changes. I test this by running playbooks twice and expecting zero changes the second time."
+
+**Key Point:** "Rerun safely: Ansible changes only what drifted from desired state."
+
+---
+
+### Q13: What are handlers, and how do they work?
+
+**How to Answer:**
+
+"Handlers are tasks that only run when notified by another task that changed something — the classic example is restarting nginx only when its config file actually changed. They run once at the end of the play, no matter how many tasks notified them. This avoids useless service restarts on every run. I name them clearly and keep them tiny."
+
+```yaml
+tasks:
+  - name: Deploy nginx config
+    ansible.builtin.template:
+      src: nginx.conf.j2
+      dest: /etc/nginx/nginx.conf
+    notify: Restart nginx
+
+handlers:
+  - name: Restart nginx
+    ansible.builtin.service:
+      name: nginx
+      state: restarted
+```
+
+**Key Point:** "Handlers run once at play end, only if notified of a change."
+
+---
+
+## Ansible in Production
+
+### Q14: How do you handle secrets like passwords and API keys in Ansible?
+
+**How to Answer:**
+
+"I use Ansible Vault to encrypt secrets at rest — the vault file is checked into git encrypted, and the password lives in CI or a password manager, never in the repo. Inside playbooks I reference vault variables like normal ones; Ansible decrypts them in memory during the run. For serious setups I pull secrets from HashiCorp Vault or AWS Secrets Manager with a lookup plugin instead of storing them anywhere. Rule one: no plaintext secrets in git, ever."
+
+```bash
+ansible-vault encrypt group_vars/prod/vault.yml
+ansible-playbook site.yml -i inventory/prod --ask-vault-pass
+```
+
+**Key Point:** "Vault-encrypt secrets; pull from a real secret store when you can."
+
+---
+
+### Q15: How would you debug a playbook that fails on some hosts but not others?
+
+**How to Answer:**
+
+"I start with -vvv to see exactly which task failed and what the module returned. Then I check gather_facts output for the failing hosts — different OS versions or missing packages are the usual culprit. I run the failing task in --check mode first, and use --limit to reproduce on just one bad host. Nine times out of ten it's a fact difference, like a missing Python version or a wrong interface name."
+
+**Key Point:** "Debug with -vvv, compare facts, reproduce with --limit on one host."
+
+---
