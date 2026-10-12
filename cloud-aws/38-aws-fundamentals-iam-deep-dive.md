@@ -91,3 +91,118 @@
 "Access keys live forever until someone rotates them, which means they get leaked in Git repos and Slack channels all the time. AWS has literally scanned public GitHub for keys for years. Instead, I give workloads IAM roles — the SDK and CLI get temporary credentials from the metadata service automatically, with no secrets to store. For human CLI access I use SSO so there are no keys on laptops either."
 
 **Key Point:** "Roles give short-lived credentials automatically; access keys are a leak waiting to happen."
+
+---
+
+## IAM Policies
+
+### Q8: How is an IAM policy evaluated — what wins?
+
+**How to Answer:**
+
+"The golden rule: an explicit Deny always wins over any Allow. By default everything is implicitly denied, so a request needs at least one Allow and zero Denys across all policies that apply — identity policies, resource policies, and boundary policies. I remember it as 'deny first, then allow'. That's why troubleshooting access issues means checking every policy layer, not just the one attached to the user."
+
+**Key Point:** "Explicit Deny beats everything; everything else starts denied."
+
+---
+
+### Q9: Walk me through an IAM policy JSON structure.
+
+**How to Answer:**
+
+"Every policy has a Version, then a Statement array. Each statement has Effect — Allow or Deny — an Action like `s3:GetObject`, a Resource ARN like `arn:aws:s3:::my-bucket/*`, and optionally a Condition for fine-tuning. The Resource is what trips people up: `my-bucket` alone covers the bucket, but you need `my-bucket/*` for the objects inside. I write policies least-privilege by default and test with the IAM policy simulator before attaching."
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:GetObject"],
+    "Resource": ["arn:aws:s3:::reports/*"]
+  }]
+}
+```
+
+**Key Point:** "Effect, Action, Resource, Condition — and the bucket ARN without /* only covers the bucket, not its objects."
+
+---
+
+### Q10: What's the difference between identity-based and resource-based policies?
+
+**How to Answer:**
+
+"Identity-based policies attach to users, groups, or roles and say what THAT identity can do. Resource-based policies attach to the resource — like an S3 bucket policy — and say who can touch it. The big practical difference: resource-based policies can grant access to identities in OTHER accounts, which identity policies can't do alone. I use identity-based policies for most things, and resource-based ones for S3, SQS, and KMS when cross-account is needed."
+
+**Key Point:** "Identity-based policies follow the person; resource-based policies follow the resource and enable cross-account access."
+
+---
+
+## IAM Roles and Trust Policies
+
+### Q11: What is a trust policy, and why does it matter?
+
+**How to Answer:**
+
+"A trust policy answers one question: who is allowed to assume this role? It's a resource-based policy attached to the role itself. For an EC2 role, the trusted principal is the `ec2.amazonaws.com` service. For cross-account, it's the other account's ARN. The classic interview trap: having the right permissions policy but a broken trust policy — then `sts:AssumeRole` gets denied and nothing works, even though the permissions look fine."
+
+**Key Point:** "The trust policy decides WHO can assume the role; the permissions policy decides WHAT they can do."
+
+---
+
+### Q12: How do instance profiles work?
+
+**How to Answer:**
+
+"An instance profile is just a container that holds an IAM role for an EC2 instance. When I launch an instance with a profile, the metadata service at `169.254.169.254` serves temporary credentials to anything on the box — the AWS CLI and SDKs pick them up automatically. No keys on disk, no secrets in user-data scripts. The credentials rotate automatically, usually every few hours."
+
+```bash
+aws ec2 associate-iam-instance-profile \
+  --instance-id i-0abc123 \
+  --iam-instance-profile Name=app-server-role
+```
+
+**Key Point:** "Instance profiles hand EC2 instances temporary role credentials — zero secrets to manage."
+
+---
+
+## Cross Account Access and STS
+
+### Q13: How do you let another AWS account access your resources?
+
+**How to Answer:**
+
+"I create a role in MY account whose trust policy lists the other account's root or a specific role ARN as a principal. Then the other account grants its users permission to call `sts:AssumeRole` on my role's ARN. Their users assume it and get temporary credentials scoped to whatever my role's permissions policy allows. I never create IAM users in my account for someone else's team — that breaks the account boundary and creates credential sprawl."
+
+**Key Point:** "Cross-account access flows through roles with trust policies — never share IAM users across accounts."
+
+---
+
+### Q14: What's the confused deputy problem, and how do you prevent it?
+
+**How to Answer:**
+
+"Imagine I let a service assume a role in my account on behalf of another customer. A malicious customer could trick that service into touching MY resources instead of theirs — the service is the confused deputy. The fix is the `ExternalId` condition in the trust policy: the caller has to know a secret-ish ID that only the real customer has. I always include ExternalId when a third party assumes roles in my account."
+
+**Key Point:** "ExternalId in the trust policy stops a service from being tricked into acting on the wrong account."
+
+---
+
+## Interview Traps and Real Scenarios
+
+### Q15: Walk me through debugging an AccessDenied error in production.
+
+**How to Answer:**
+
+"First I check CloudTrail for the exact API call and the error context — it often tells me which policy denied it. Then I verify the identity's attached policies and the resource policy for explicit Denys. I also check permission boundaries and SCPs if the account is in an Organization — those trip up a lot of people because they're invisible in the IAM console for the role. Once I find it, I reproduce with the IAM policy simulator before changing anything, then fix and re-test."
+
+**Key Point:** "CloudTrail for the context, check every policy layer including SCPs and boundaries, simulate before you fix."
+
+---
+
+### Q16: Rapid-fire traps — what should I never say about IAM?
+
+**How to Answer:**
+
+"I never say the root user is fine for daily work — it should be locked down with MFA and almost never used. I never attach `AdministratorAccess` to a regular user or `*` resources in a production policy. I never commit access keys to Git. And I never confuse authentication — who you are — with authorization — what you're allowed to do. Interviewers ask these to see if I think like someone who's been paged at 2 AM."
+
+**Key Point:** "No root for daily work, no wildcards in prod, no keys in Git, authn is not authz."
