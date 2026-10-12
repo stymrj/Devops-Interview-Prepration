@@ -114,3 +114,86 @@ EOF
 "Hooks run custom commands before or after Terraform commands — things like `before_hook` and `after_hook` in the terragrunt.hcl. I use them for stuff Terraform can't do natively, like running `tflint` before apply or invalidating a CloudFront distribution after. They're escape hatches, not everyday tools — if my logic fits in a module, it stays in the module. Hooks are for the glue work around Terraform."
 
 **Key Point:** "Hooks run shell commands around Terraform — linting, notifications, cleanup."
+
+---
+
+## OpenTofu Basics
+
+### Q8: What is OpenTofu, and why was it created?
+
+**How to Answer:**
+
+"OpenTofu is the open-source fork of Terraform, created after HashiCorp switched Terraform from open-source to the Business Source License in 2023. The Linux Foundation picked it up so the community has a truly open IaC engine that stays free forever. It's fully compatible with Terraform configs — my existing HCL works with almost no changes. I treat it as Terraform's open future, not a different product."
+
+**Key Point:** "OpenTofu is Terraform's Linux Foundation fork — open forever, same HCL."
+
+---
+
+### Q9: What's actually different between Terraform and OpenTofu today?
+
+**How to Answer:**
+
+"Feature-wise they're very close, but OpenTofu has added things Terraform doesn't have. It supports dynamic provider-defined functions, state encryption at rest, and `.tofu` file extensions. The `tofu test` framework works the same as Terraform's. The biggest practical difference is philosophical: OpenTofu is community-governed with no license risk. Under the hood the syntax and workflow are near-identical, which is why switching is so easy."
+
+**Key Point:** "Near-identical workflow, plus state encryption and no license lock-in."
+
+---
+
+## Terraform vs OpenTofu Migration
+
+### Q10: How would you migrate a production Terraform setup to OpenTofu?
+
+**How to Answer:**
+
+"I'd do it in stages, never in one big bang. First, swap the binary — `tofu` reads Terraform state files directly, so I run `tofu init` and `tofu plan` and compare the plan against Terraform's. If the plan is empty, I know it's safe. Then I migrate the team: update CI pipelines, rename commands in docs, and gradually switch providers. State backups before every step, obviously — I never touch production state without a rollback copy."
+
+```bash
+terraform state pull > state-backup.tfstate
+tofu init && tofu plan   # plan must be empty = zero drift
+```
+
+**Key Point:** "Swap the binary, compare plans, migrate in stages — backups first."
+
+---
+
+### Q11: Is OpenTofu's state format compatible with Terraform's?
+
+**How to Answer:**
+
+"Yes — OpenTofu reads Terraform state files directly because it's a fork of the same codebase. My existing `.tfstate` files work with the `tofu` binary without conversion. Going backward can be trickier: if OpenTofu writes state with a newer format version, old Terraform may refuse to read it. So I only move one direction at a time in production, and I always keep a state backup before the switch."
+
+**Key Point:** "OpenTofu reads Terraform state directly — migrate forward, keep backups."
+
+---
+
+## Production Workflows
+
+### Q12: When would you pick Terragrunt, OpenTofu, or plain Terraform in 2026?
+
+**How to Answer:**
+
+"I'd pick plain Terraform or OpenTofu when the setup is small — one or two environments, no repetition problem. I'd add Terragrunt when I have many environments or accounts and the copy-paste is becoming a real risk. For a fresh greenfield project in 2026, I'd go OpenTofu for the license safety unless the company is already invested in Terraform Cloud. The decision is about scale and licensing, not about which tool is 'better' in the abstract."
+
+**Key Point:** "Small: plain Terraform. Many envs: Terragrunt. Greenfield 2026: OpenTofu."
+
+---
+
+### Q13: How do you run Terragrunt or OpenTofu in a CI/CD pipeline?
+
+**How to Answer:**
+
+"My pipeline runs `run-all plan` on pull requests and posts the plan as a comment, so reviewers see the blast radius. On merge to main, `run-all apply` runs with the dependency graph so resources deploy in the right order. State lives in S3 with DynamoDB locking, and the pipeline assumes an IAM role — no long-lived keys. For OpenTofu it's the same shape, just `tofu plan` instead of `terraform plan`."
+
+**Key Point:** "Plan on PR, apply on merge, remote state with locking, IAM roles."
+
+---
+
+## Interview Traps and Real Scenarios
+
+### Q14: What are the common traps interviewers set around Terragrunt and OpenTofu?
+
+**How to Answer:**
+
+"One classic: 'Does Terragrunt lock state?' No — it inherits Terraform's locking; Terragrunt is just a wrapper. Another: 'Is Terragrunt a replacement for Terraform?' No — you still need the Terraform binary installed. For OpenTofu, they'll ask 'Can Terraform read OpenTofu-written state?' Maybe not, so backups matter. And the scenario one: 'Your run-all apply failed halfway — what now?' I fix the root cause and re-run, because each unit has its own state, so reruns are safe and idempotent."
+
+**Key Point:** "Terragrunt doesn't lock or replace Terraform; reruns are safe per-unit."
