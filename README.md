@@ -14,7 +14,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 4 | [Containers (Docker)](containers/) | 5/5 |
 | 5 | [Kubernetes](kubernetes/) | 8/8 |
 | 6 | [CI/CD](ci-cd/) | 5/5 |
-| 7 | [Infrastructure as Code](infrastructure-as-code/) | 4/5 |
+| 7 | [Infrastructure as Code](infrastructure-as-code/) | 5/5 |
 | 8 | [Cloud (AWS)](cloud-aws/) | ⬜ |
 | 9 | [Monitoring & Logging](monitoring-logging/) | ⬜ |
 | 10 | [Networking & Security](networking-security/) | ⬜ |
@@ -62,6 +62,7 @@ A new guide lands here every day. Progress so far:
 - [x] 34 — [Terraform State Management](infrastructure-as-code/34-terraform-state-management.md) (+ [hands-on lab](infrastructure-as-code/labs/34-terraform-state-management-lab.md), [cheat sheet](infrastructure-as-code/cheat-sheets/34-terraform-state-management-cheatsheet.md))
 - [x] 35 — [Terraform Modules, Workspaces & Best Practices](infrastructure-as-code/35-terraform-modules-workspaces-best-practices.md) (+ [hands-on lab](infrastructure-as-code/labs/35-terraform-modules-workspaces-best-practices-lab.md), [cheat sheet](infrastructure-as-code/cheat-sheets/35-terraform-modules-workspaces-best-practices-cheatsheet.md))
 - [x] 36 — [Ansible (Playbooks, Roles, Inventory)](infrastructure-as-code/36-ansible-playbooks-roles-inventory.md) (+ [hands-on lab](infrastructure-as-code/labs/36-ansible-playbooks-roles-inventory-lab.md), [cheat sheet](infrastructure-as-code/cheat-sheets/36-ansible-playbooks-roles-inventory-cheatsheet.md))
+- [x] 37 — [Terragrunt & OpenTofu](infrastructure-as-code/37-terragrunt-opentofu.md) (+ [hands-on lab](infrastructure-as-code/labs/37-terragrunt-opentofu-lab.md), [cheat sheet](infrastructure-as-code/cheat-sheets/37-terragrunt-opentofu-cheatsheet.md))
 
 ---
 
