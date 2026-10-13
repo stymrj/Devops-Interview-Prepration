@@ -15,7 +15,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 5 | [Kubernetes](kubernetes/) | 8/8 |
 | 6 | [CI/CD](ci-cd/) | 5/5 |
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | 5/5 |
-| 8 | [Cloud (AWS)](cloud-aws/) | 1/7 |
+| 8 | [Cloud (AWS)](cloud-aws/) | 2/7 |
 | 9 | [Monitoring & Logging](monitoring-logging/) | ⬜ |
 | 10 | [Networking & Security](networking-security/) | ⬜ |
 | 11 | [Best Practices](best-practices/) | ⬜ |
@@ -64,6 +64,7 @@ A new guide lands here every day. Progress so far:
 - [x] 36 — [Ansible (Playbooks, Roles, Inventory)](infrastructure-as-code/36-ansible-playbooks-roles-inventory.md) (+ [hands-on lab](infrastructure-as-code/labs/36-ansible-playbooks-roles-inventory-lab.md), [cheat sheet](infrastructure-as-code/cheat-sheets/36-ansible-playbooks-roles-inventory-cheatsheet.md))
 - [x] 37 — [Terragrunt & OpenTofu](infrastructure-as-code/37-terragrunt-opentofu.md) (+ [hands-on lab](infrastructure-as-code/labs/37-terragrunt-opentofu-lab.md), [cheat sheet](infrastructure-as-code/cheat-sheets/37-terragrunt-opentofu-cheatsheet.md))
 - [x] 38 — [AWS Fundamentals & IAM Deep Dive](cloud-aws/38-aws-fundamentals-iam-deep-dive.md) (+ [hands-on lab](cloud-aws/labs/38-aws-fundamentals-iam-deep-dive-lab.md), [cheat sheet](cloud-aws/cheat-sheets/38-aws-fundamentals-iam-deep-dive-cheatsheet.md))
+- [x] 39 — [EC2 (Instances, AMIs, User Data)](cloud-aws/39-ec2-instances-amis-user-data.md) (+ [hands-on lab](cloud-aws/labs/39-ec2-instances-amis-user-data-lab.md), [cheat sheet](cloud-aws/cheat-sheets/39-ec2-instances-amis-user-data-cheatsheet.md))
 
 ---
 
