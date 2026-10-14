@@ -85,3 +85,95 @@ aws rds promote-read-replica --db-instance-identifier prod-replica-1
 
 ---
 
+## Backups Snapshots and Recovery
+
+### Q7: Walk me through RDS backups — automated backups vs snapshots.
+
+**How to Answer:**
+
+"Automated backups run daily in the backup window and keep transaction logs, so I can restore to any point in time within the retention period — up to 35 days. Manual snapshots are point-in-time copies I take myself, and they stick around until I delete them, which makes them perfect for pre-deploy safety nets. Restoring always creates a brand-new DB instance — AWS never overwrites in place. That matters in interviews because the new instance gets a new endpoint, so I plan for config updates and DNS changes after a restore."
+
+**Key Point:** "Automated backups give point-in-time recovery; manual snapshots are forever until deleted; restores always create a new instance."
+
+### Q8: How do you design a backup strategy that actually survives a bad day?
+
+**How to Answer:**
+
+"I set automated backup retention to 30 days, take a manual snapshot before every migration or major deploy, and copy snapshots to a second region for disaster recovery. I test restores quarterly — an untested backup is just a hope. I also keep the backup window in off-peak hours and make sure the instance isn't in a state where snapshots stall, like storage-full. Interviewers love asking about RTO and RPO: my RPO here is five minutes thanks to transaction logs, and my RTO is however long a restore takes."
+
+```bash
+# Manual snapshot before a risky migration
+aws rds create-db-snapshot \
+  --db-instance-identifier prod-db \
+  --db-snapshot-identifier prod-db-pre-migration-$(date +%F)
+
+# Copy it cross-region for DR
+aws rds copy-db-snapshot \
+  --source-db-snapshot-identifier prod-db-pre-migration-2026-10-14 \
+  --target-db-snapshot-identifier prod-db-pre-migration-2026-10-14 \
+  --source-region ap-south-1 --region ap-south-2
+```
+
+**Key Point:** "30-day automated retention, manual snapshots before migrations, cross-region copies, and tested restores."
+
+---
+
+## Aurora When and Why
+
+### Q9: What is Aurora, and when does it beat plain RDS?
+
+**How to Answer:**
+
+"Aurora is AWS's cloud-native relational engine, compatible with MySQL and Postgres, with storage that automatically grows to 128 TB and replicates across three AZs six ways. It beats plain RDS on throughput — up to 5x MySQL and 3x Postgres in AWS's numbers — and failover takes seconds because replicas share the same underlying storage. I pick Aurora when the database is the bottleneck: high-throughput OLTP, global apps, or when I need fast cloning for dev environments. For a small internal app, plain RDS is cheaper and simpler."
+
+**Key Point:** "Aurora is cloud-native MySQL/Postgres with shared storage, faster failover, and auto-scaling storage — pick it when the DB is the bottleneck."
+
+### Q10: How does Aurora storage actually work? Why is it different?
+
+**How to Answer:**
+
+"Aurora separates compute from storage — my writer and up to 15 readers all talk to the same distributed storage layer, so adding a reader doesn't copy data. Storage is replicated six ways across three AZs and self-heals, and it grows in 10 GB chunks automatically with no provisioning. Backups are continuous and incremental against that shared storage, so they don't slow down the database. This is the 'why' behind Aurora's fast failover: a reader can be promoted in seconds because there's no data to copy."
+
+**Key Point:** "Shared distributed storage across AZs: no data copying for replicas, seconds-fast failover, automatic growth."
+
+---
+
+## Performance Tuning and RDS Proxy
+
+### Q11: A query is slow on RDS — what's your debugging order?
+
+**How to Answer:**
+
+"First I check Performance Insights to see whether the bottleneck is CPU, I/O, or waiting on locks — I don't guess. Then I look at the slow query log and `EXPLAIN ANALYZE` the top offenders for missing indexes or full table scans. After that I check the parameter group: things like `max_connections`, work memory, and buffer pool sizes for the instance class. Only then do I consider scaling up or adding a read replica, because throwing hardware at a missing index is the classic expensive mistake."
+
+**Key Point:** "Performance Insights first, slow queries second, parameter group third — scale hardware last, not first."
+
+```bash
+# Pull the slow query log from RDS to a file for analysis
+aws rds download-db-log-file-portion \
+  --db-instance-identifier prod-db \
+  --log-file-name slowquery/mysql-slowquery.log \
+  --starting-token 0 --output text > slow.log
+```
+
+### Q12: What problem does RDS Proxy solve?
+
+**How to Answer:**
+
+"RDS Proxy is a connection pooler that sits between my app and the database. Serverless apps and auto-scaled services open thousands of short-lived connections, and each one costs the DB memory and CPU — Postgres especially suffers past a few hundred connections. The proxy pools and reuses connections, and during a failover it holds app connections while rerouting to the new primary, which cuts failover downtime for the app dramatically. I reach for it with Lambda-heavy architectures or any app where connection counts spike unpredictably."
+
+**Key Point:** "RDS Proxy pools database connections and smooths failovers — essential for Lambda and auto-scaled apps."
+
+```yaml
+# Terraform: attach RDS Proxy to cut connection churn
+resource "aws_db_proxy" "app" {
+  name                   = "app-db-proxy"
+  engine_family          = "POSTGRESQL"
+  idle_client_timeout    = 1800
+  require_tls            = true
+  vpc_subnet_ids         = var.private_subnet_ids
+}
+```
+
+---
+
