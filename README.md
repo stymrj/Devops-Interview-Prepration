@@ -15,7 +15,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 5 | [Kubernetes](kubernetes/) | 8/8 |
 | 6 | [CI/CD](ci-cd/) | 5/5 |
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | 5/5 |
-| 8 | [Cloud (AWS)](cloud-aws/) | 4/7 |
+| 8 | [Cloud (AWS)](cloud-aws/) | 5/7 |
 | 9 | [Monitoring & Logging](monitoring-logging/) | ⬜ |
 | 10 | [Networking & Security](networking-security/) | ⬜ |
 | 11 | [Best Practices](best-practices/) | ⬜ |
@@ -67,6 +67,7 @@ A new guide lands here every day. Progress so far:
 - [x] 39 — [EC2 (Instances, AMIs, User Data)](cloud-aws/39-ec2-instances-amis-user-data.md) (+ [hands-on lab](cloud-aws/labs/39-ec2-instances-amis-user-data-lab.md), [cheat sheet](cloud-aws/cheat-sheets/39-ec2-instances-amis-user-data-cheatsheet.md))
 - [x] 40 — [VPC (Subnets, Route Tables, NAT, Security Groups)](cloud-aws/40-vpc-subnets-route-tables-nat-security-groups.md) (+ [hands-on lab](cloud-aws/labs/40-vpc-subnets-route-tables-nat-security-groups-lab.md), [cheat sheet](cloud-aws/cheat-sheets/40-vpc-subnets-route-tables-nat-security-groups-cheatsheet.md))
 - [x] 41 — [S3 (Storage Classes, Lifecycle, Versioning)](cloud-aws/41-s3-storage-classes-lifecycle-versioning.md) (+ [hands-on lab](cloud-aws/labs/41-s3-storage-classes-lifecycle-versioning-lab.md), [cheat sheet](cloud-aws/cheat-sheets/41-s3-storage-classes-lifecycle-versioning-cheatsheet.md))
+- [x] 42 — [RDS & Database Decisions on AWS](cloud-aws/42-rds-database-decisions-aws.md) (+ [hands-on lab](cloud-aws/labs/42-rds-database-decisions-aws-lab.md), [cheat sheet](cloud-aws/cheat-sheets/42-rds-database-decisions-aws-cheatsheet.md))
 
 ---
 
