@@ -177,3 +177,45 @@ resource "aws_db_proxy" "app" {
 
 ---
 
+## Security and Networking
+
+### Q13: How do you lock down an RDS instance properly?
+
+**How to Answer:**
+
+"I put RDS in private subnets with no public access, and the security group only allows port 5432 or 3306 from the app's security group — never from 0.0.0.0. Credentials live in Secrets Manager with automatic rotation instead of hardcoded in env files, and I enable IAM database authentication where the app supports it. Storage encryption is on with a KMS key I control, plus encryption in transit with TLS. The interview trap: storage encryption is set at creation and can't be turned on later for an existing instance — I'd have to snapshot, copy with encryption, and restore."
+
+**Key Point:** "Private subnets, SG-scoped access, Secrets Manager rotation, KMS encryption at rest, TLS in transit — encryption is decided at creation."
+
+```bash
+# Rotate the master password via Secrets Manager instead of touching the app
+aws secretsmanager rotate-secret --secret-id prod/rds/master-password
+```
+
+---
+
+## Database Decisions on AWS
+
+### Q14: RDS vs Aurora vs DynamoDB vs self-hosted on EC2 — how do you decide?
+
+**How to Answer:**
+
+"I start from the data model and access pattern, not the service list. Relational with joins, transactions, and complex queries means RDS or Aurora — RDS for standard workloads, Aurora when I need scale, fast failover, or global distribution. Key-value or document access with single-digit millisecond latency at any scale means DynamoDB, especially serverless apps. Self-hosted on EC2 only wins when I need an engine AWS doesn't offer, a specific extension, or full control over the OS — and I price in the on-call cost honestly. When an interviewer asks me to 'just pick one,' I walk through this decision tree out loud."
+
+**Key Point:** "Relational with joins: RDS or Aurora. Key-value at massive scale: DynamoDB. Self-hosted only for engines or extensions AWS doesn't offer."
+
+---
+
+## Interview Traps and Real Scenarios
+
+### Q15: Your primary RDS instance just failed over at 2 AM — what do you check in the morning?
+
+**How to Answer:**
+
+"First I confirm the app recovered: check that the endpoint DNS flipped, connections re-established, and there are no lingering stale connections pointing at the old primary. Then I look at RDS events and CloudWatch to find the trigger — was it an AZ issue, storage full, or a crash? I verify the new primary's replication health and make sure a fresh standby got provisioned, because right after failover you're running without a safety net until AWS rebuilds it. Finally I write it up: timeline, root cause, and whether our RTO held. Interviewers want the boring operational discipline here, not heroics."
+
+**Key Point:** "Verify app recovery, find the trigger in events and metrics, confirm a new standby exists, then write the timeline up."
+
+---
+
+*Day 42 of 58 — next: Load Balancing & Autoscaling (ALB, ASG).*
