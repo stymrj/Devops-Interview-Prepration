@@ -75,3 +75,74 @@ aws elbv2 create-target-group --name api-tg \
 **Key Point:** "Stickiness is a migration crutch; the real answer is stateless apps with sessions in Redis or the database."
 
 ---
+
+## Auto Scaling Groups Deep Dive
+
+### Q6: What are the moving parts of an Auto Scaling Group?
+
+**How to Answer:**
+
+"A launch template defines what each instance looks like — AMI, instance type, user data, IAM role. The ASG itself sets min, max, and desired capacity and spreads instances across AZs for resilience. I point the ASG at a target group so the ALB discovers new instances automatically, and health checks decide when a sick instance gets terminated and replaced. In an interview I lead with the template because interviewers want to hear that instances are cattle, created from a versioned template, not hand-built."
+
+**Key Point:** "Launch template defines the instance; the ASG holds desired capacity across AZs and replaces unhealthy ones."
+
+---
+
+### Q7: When my ASG scales in, which instance does it kill?
+
+**How to Answer:**
+
+"By default the ASG uses the Default termination policy, which keeps AZs balanced first — it picks the AZ with the most instances, then the oldest launch template, then the instance closest to its billing hour. But I can set custom termination policies, like terminating the newest instances first to protect long-running ones, or the oldest to force freshness. Interviewers love this because most people assume it's random. If my app runs long-lived jobs, I care deeply about this answer."
+
+**Key Point:** "Default policy balances AZs then kills the oldest template; custom policies let me protect or rotate instances deliberately."
+
+---
+
+### Q8: What are lifecycle hooks, and when would I actually use one?
+
+**How to Answer:**
+
+"A lifecycle hook pauses the ASG before it finishes launching or terminating an instance, so I can run custom work first. The classic use: on scale-in, wait for in-flight requests to drain and push final logs before the instance dies. On launch, I use one to run a warmup script or register the instance with an external system before it takes traffic. The hook publishes to SNS or EventBridge, my automation does its thing, then it signals complete — or the timeout fires and the ASG moves on."
+
+**Key Point:** "Lifecycle hooks pause launch or termination so I can drain, warm up, or register instances before the ASG proceeds."
+
+---
+
+## Scaling Policies and Dynamic Scaling
+
+### Q9: Simple, step, and target tracking scaling — what's the difference?
+
+**How to Answer:**
+
+"Simple scaling adds or removes a fixed number of instances when an alarm fires — it's the oldest and crudest, and it has a cooldown so it doesn't flap. Step scaling is smarter: the adjustment depends on how far the metric breached the threshold, so a bigger spike adds more instances. Target tracking is what I reach for most — I tell it to keep average CPU at 50 percent, and it continuously adjusts capacity like a thermostat. In an interview I say: target tracking for the steady state, step scaling when I need aggressive responses to big spikes."
+
+```bash
+aws autoscaling put-scaling-policy --policy-name cpu-target \
+  --auto-scaling-group-name web-asg \
+  --policy-type TargetTrackingScaling \
+  --target-tracking-configuration file://config.json
+```
+
+**Key Point:** "Simple is fixed-step and crude, step scales by breach size, target tracking holds a metric at a set value like a thermostat."
+
+---
+
+### Q10: Scheduled scaling vs predictive scaling — when does each make sense?
+
+**How to Answer:**
+
+"Scheduled scaling changes capacity on a timetable — I know traffic triples at 9 AM on weekdays, so I pre-warm instances at 8:30. It's perfect for predictable patterns and avoids the lag of reactive scaling entirely. Predictive scaling uses machine learning on historical CloudWatch data to forecast demand and pre-provision capacity, which handles patterns I can't easily write a cron for. The interview answer: scheduled for known spikes like sales events, predictive when the pattern is real but irregular."
+
+**Key Point:** "Scheduled scaling pre-warms on a timetable for known spikes; predictive scaling forecasts demand from history."
+
+---
+
+### Q11: What's instance refresh, and why do I care about warm pools?
+
+**How to Answer:**
+
+"Instance refresh rolls my ASG to a new launch template version — new AMI, new user data — replacing instances gradually with a configurable minimum healthy percentage, so it's a safe rolling deploy for my fleet. A warm pool keeps a set of pre-initialized instances stopped and ready, so scale-out is fast because the slow boot and warmup already happened. Together they solve the two pain points of ASGs: safe updates and slow scale-out. I mention both when interviewers ask how I handle deploys on ASGs."
+
+**Key Point:** "Instance refresh is a rolling update for the fleet; warm pools pre-boot instances so scale-out skips the slow startup."
+
+---
