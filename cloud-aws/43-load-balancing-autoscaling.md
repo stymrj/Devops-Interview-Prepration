@@ -146,3 +146,33 @@ aws autoscaling put-scaling-policy --policy-name cpu-target \
 **Key Point:** "Instance refresh is a rolling update for the fleet; warm pools pre-boot instances so scale-out skips the slow startup."
 
 ---
+
+## Interview Traps and Real Scenarios
+
+### Q12: My ALB returns 502s but the instances look healthy. What do I check?
+
+**How to Answer:**
+
+"A 502 from the ALB usually means the target closed the connection or responded badly — the ALB is fine, the backend isn't. First I check the target's health status and the ALB's TargetResponseTime and HTTPCode_Target_5XX metrics in CloudWatch. Common causes I've seen: the app crashed but the health check endpoint still returns 200, the app's keep-alive timeout is shorter than the ALB's idle timeout, or a security group changed and the ALB can't reach the app port. I debug target-side, not ALB-side."
+
+**Key Point:** "ALB 502s mean the backend broke the connection — check target metrics, keep-alive timeouts, and security groups."
+
+---
+
+### Q13: Traffic spiked and my ASG scaled too slowly. Users saw errors for ten minutes. What went wrong?
+
+**How to Answer:**
+
+"Reactive scaling has a lag: the CloudWatch alarm needs several breached periods, then instances take minutes to boot, pass health checks, and register with the target group. Ten minutes of pain usually means my alarm thresholds were too loose or the AMI took forever to initialize. The fixes I talk about: tighter alarms with fewer evaluation periods, target tracking instead of simple scaling, warm pools to skip boot time, and scheduled or predictive scaling if the spike was foreseeable. And a little over-provisioned headroom is cheaper than an outage."
+
+**Key Point:** "Slow scale-out is alarm lag plus boot time — fix with tighter alarms, warm pools, and pre-scaling for known spikes."
+
+---
+
+### Q14: How do I do zero-downtime deploys with an ALB and ASG?
+
+**How to Answer:**
+
+"I keep the ALB in front so traffic only flows to healthy targets, then roll the fleet with instance refresh at a safe minimum healthy percentage. The deregistration delay on the target group gives in-flight requests time to finish before the old instance is removed. For extra safety I use CodeDeploy blue-green, which spins up a whole new ASG, shifts the ALB listener to it, and keeps the old one around for instant rollback. The interview one-liner: the ALB's health checks plus deregistration delay are what make the deploy safe."
+
+**Key Point:** "Instance refresh with minimum healthy percentage, deregistration delay for draining, or CodeDeploy blue-green for instant rollback."
