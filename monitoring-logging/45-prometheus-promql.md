@@ -55,3 +55,55 @@
 **Key Point:** "Every unique label combo is a series in RAM — unbounded label values (user IDs, request IDs) will OOM your Prometheus."
 
 ---
+
+## PromQL Query Language
+
+### Q5: Instant vectors vs range vectors — what's the difference?
+
+**How to Answer:**
+
+"An instant vector is a set of values at one point in time — `http_requests_total` gives me the latest counter value per series right now. A range vector adds a time window — `http_requests_total[5m]` gives me all samples from the last 5 minutes. Range vectors only work with functions like `rate()` or `increase()` that need history. The interview trap: putting a range selector on a gauge query directly fails — PromQL expects an instant vector there unless a function consumes the range."
+
+```promql
+# Error rate over the last 5 minutes
+rate(http_requests_total{status=~"5.."}[5m])
+```
+
+**Key Point:** "Instant vector = values right now; range vector = values over a window, and only range functions can consume it."
+
+---
+
+### Q6: rate() vs irate() — which one do you actually use?
+
+**How to Answer:**
+
+"I default to `rate()` — it averages the per-second increase over the window, which smooths out scrape hiccups. `irate()` only looks at the last two samples, so it's jumpy and I use it for fast-moving counters on graphs where I want responsiveness, never in alerts. The real trap: the window must be at least 2-4x the scrape interval — `rate(x[1m])` on a 30s scrape interval misses samples and gives wrong numbers. I use `[5m]` as my floor."
+
+**Key Point:** "Use rate() in alerts and SLOs, irate() only for twitchy graphs — and keep the window 2-4x the scrape interval."
+
+---
+
+### Q7: How do by, without, and topk work in aggregations?
+
+**How to Answer:**
+
+"`by` keeps only the labels I list — `sum by (service) (rate(http_requests_total[5m]))` gives me total RPS per service. `without` drops the listed labels and keeps the rest. `topk` returns the K highest series — `topk(5, ...)` for my top 5 CPU-hungry pods. The trap: aggregating without `by` collapses everything into one number, which is what you want for a global SLO but terrible for finding which service is broken. I always aggregate at the level I'll page on."
+
+```promql
+# Top 5 pods by CPU usage
+topk(5, sum by (pod) (rate(container_cpu_usage_seconds_total[5m])))
+```
+
+**Key Point:** "by keeps listed labels, without drops them, topk ranks — aggregate at the level you'd actually page on."
+
+---
+
+### Q8: How do you compute p95 latency in PromQL?
+
+**How to Answer:**
+
+"I use `histogram_quantile` on the histogram buckets — `histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))`. The `le` label must survive aggregation, so I sum `by (le)` — dropping it is the classic mistake that returns garbage. And it has to be the `_bucket` series, not `_sum` or `_count`. One caveat I mention: histogram_quantile interpolates between buckets, so bucket boundaries I choose at instrumentation time decide how accurate my p95 is."
+
+**Key Point:** "histogram_quantile(0.95, sum by (le) (rate(..._bucket[5m]))) — keep the le label and query the _bucket series."
+
+---
