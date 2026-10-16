@@ -107,3 +107,66 @@ topk(5, sum by (pod) (rate(container_cpu_usage_seconds_total[5m])))
 **Key Point:** "histogram_quantile(0.95, sum by (le) (rate(..._bucket[5m]))) — keep the le label and query the _bucket series."
 
 ---
+
+## Scraping Rules and Alerting
+
+### Q9: How do service discovery and scrape configs work in practice?
+
+**How to Answer:**
+
+"In Kubernetes I use `kubernetes_sd_configs` so Prometheus discovers pods and services automatically as they come and go — no static target lists to maintain. I annotate services or use PodMonitors/ServiceMonitors from the Prometheus Operator, and relabeling decides which endpoints actually get scraped and what labels they carry. The scrape config sets the interval, timeout, and path. The interview trap: a target showing DOWN usually isn't the app — it's the scrape config, wrong port annotation, or network policy blocking Prometheus."
+
+```yaml
+scrape_configs:
+  - job_name: 'my-app'
+    kubernetes_sd_configs:
+      - role: endpoints
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+        action: keep
+        regex: "true"
+```
+
+**Key Point:** "Service discovery finds targets dynamically; relabeling filters them — a DOWN target is usually config, not the app."
+
+---
+
+### Q10: What is relabeling, and when do you drop or rewrite labels?
+
+**How to Answer:**
+
+"Relabeling runs before the scrape and rewrites the target's label set — keep, drop, replace, or hashmod actions. I use it to drop noisy targets, strip high-cardinality labels before they hit the TSDB, and map Kubernetes metadata like namespace and pod name onto clean labels. It also runs after scraping as metric_relabel_configs — that's my last line of defense against cardinality bombs, dropping series I don't need. If an interviewer asks for one use case: dropping the `pod` label on aggregated metrics I'll never alert per-pod on."
+
+**Key Point:** "Relabeling rewrites labels pre-scrape; metric_relabel_configs drops series post-scrape — both fight cardinality."
+
+---
+
+### Q11: Recording rules vs alerting rules — how do you use each?
+
+**How to Answer:**
+
+"Recording rules precompute expensive queries into new series — `job:http_requests:rate5m` — so my dashboards and alerts query one series instead of re-running heavy aggregations every evaluation. Alerting rules evaluate an expression and fire to Alertmanager when it's true for the `for` duration. The `for` clause is what separates a blip from a real incident — I set it based on how fast the symptom becomes user-facing. Alertmanager then handles dedup, grouping, silences, and routing to PagerDuty or Slack."
+
+```yaml
+groups:
+  - name: api-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: sum by (service) (rate(http_requests_total{status=~"5.."}[5m]))
+              / sum by (service) (rate(http_requests_total[5m])) > 0.05
+        for: 10m
+        labels: { severity: page }
+        annotations: { summary: "Error rate above 5% for {{ $labels.service }}" }
+```
+
+**Key Point:** "Recording rules precompute expensive queries; alerting rules fire to Alertmanager — the for clause turns blips into real pages."
+
+---
+
+### Q12: When do you use the Pushgateway, and what's the trap?
+
+**How to Answer:**
+
+"Only for short-lived jobs — batch scripts, cron jobs, CI pipelines — things that die before Prometheus can scrape them. The job pushes its final metrics to the Pushgateway, which holds them for scraping. The trap: using it for long-lived services. Stale metrics linger after the job dies, and a dead instance keeps reporting its last values as if it's alive — I've seen that mask real outages. For anything that lives longer than a scrape interval, expose /metrics and let Prometheus pull."
+
+**Key Point:** "Pushgateway is only for short-lived jobs — for long-lived services it leaves stale metrics that mask outages."
