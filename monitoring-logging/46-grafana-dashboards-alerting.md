@@ -104,3 +104,65 @@ sum(rate(http_requests_total{service="$service", status=~"5.."}[5m]))
 
 ---
 
+## Alerting Done Right
+
+### Q8: How does Grafana alerting actually evaluate and fire?
+
+**How to Answer:**
+
+"Grafana alerting runs your query on an interval — say every minute — and checks the result against a threshold condition, like error rate above 5%. An alert isn't instant: it moves from Normal to Pending while the condition holds, and only fires after the 'for' duration passes, which filters out one-minute blips. Once firing, it goes to a notification policy that decides who gets paged based on labels. So the full path is: query evaluated on interval, condition held for the 'for' window, then routed by labels to a contact point."
+
+**Key Point:** "Evaluate on an interval, require the condition to hold through the 'for' window, then route by labels — that's the whole pipeline."
+
+---
+
+### Q9: Grafana alerting vs Alertmanager — when do you use which?
+
+**How to Answer:**
+
+"They solve the same problem at different layers. Prometheus Alertmanager handles alerts defined in Prometheus recording and alerting rules — it's the classic path if Prometheus is your only datasource. Grafana alerting is datasource-agnostic: one alerting engine across Prometheus, Loki, CloudWatch, even SQL databases, with a UI for building rules instead of YAML. I reach for Alertmanager when the stack is pure Prometheus and the team already lives in YAML. I reach for Grafana alerting when alerts need to span multiple backends — like paging on a Loki log pattern and a Prometheus metric from one rule set."
+
+**Key Point:** "Alertmanager for pure-Prometheus YAML workflows; Grafana alerting when rules must span multiple datasources."
+
+---
+
+### Q10: What makes an alert good versus a 3am pager that everyone ignores?
+
+**How to Answer:**
+
+"A good alert is actionable, urgent, and tied to user impact — 'checkout error rate above 2% for 10 minutes, runbook linked' tells me what's broken and what to do. A bad alert fires on a symptom nobody can act on, like 'CPU at 85%,' with no runbook and no customer impact. I alert on symptoms from the user's perspective — error budget burn, latency, availability — not on internal causes. And every alert needs an owner and a runbook link, otherwise it's just noise that trains the team to ignore pages."
+
+**Key Point:** "Alert on user-facing symptoms with an owner and runbook — 'CPU at 85%' with no action is noise, not an alert."
+
+---
+
+### Q11: How do you route alerts to the right person or team?
+
+**How to Answer:**
+
+"Routing is all labels. Every alert carries labels like team, service, and severity, and notification policies match on those labels to pick the contact point — PagerDuty for the payments team, Slack for the platform team's warnings. I set up a default policy as a catch-all so nothing silently drops, then nested policies for team-specific routing. Mute timings handle the known stuff — maintenance windows, deploys — so alerts don't fire during a planned database migration. The interview trap is routing by alert name instead of labels; names change, label conventions don't."
+
+```yaml
+# notification policy sketch: route by labels, not alert names
+routes:
+  - matchers: [team = payments, severity = critical]
+    receiver: pagerduty-payments
+  - matchers: [severity = warning]
+    receiver: slack-platform-warnings
+```
+
+**Key Point:** "Route on labels — team, service, severity — with a catch-all default and mute timings for planned work."
+
+---
+
+### Q12: How do you fight alert fatigue in practice?
+
+**How to Answer:**
+
+"I treat every page as a bug report against the alerting config. If an alert fires and nobody does anything, I either fix the threshold, add a 'for' window, or delete the alert — alerting on it again unchanged is just choosing to be woken up. I deduplicate aggressively: one alert per incident, grouped by service, not ten panels screaming about the same outage. And I track alert volume per team per week — if a team gets more than a couple of pages a week, their thresholds are wrong, not their luck. The goal is that when the pager goes off, everyone believes it's real."
+
+**Key Point:** "Unactionable alerts get fixed or deleted, incidents get one grouped page, and page volume per team is a metric you watch."
+
+---
+
+*Built for interview prep, one deep-dive at a time.*
