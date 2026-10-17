@@ -138,3 +138,45 @@ scrape_configs:
 "I'd pick ELK when the team needs heavy full-text search — compliance teams digging through arbitrary log text, or legacy apps with messy unstructured logs. Elasticsearch's full indexing pays off there. I'd pick Loki when the stack is already Prometheus and Grafana, logs are structured, and cost is a real constraint — which honestly describes most startups I've seen. The operational difference is real too: running Elasticsearch well takes a dedicated person, Loki mostly just runs. Interviewers want to hear that it's a cost-vs-search-power tradeoff, not a religious choice."
 
 **Key Point:** "ELK for heavy full-text search and messy logs, Loki for cost-effective structured logging in Prometheus/Grafana shops."
+
+---
+
+## Logging Strategy and Interview Scenarios
+
+### Q11: What's the high-cardinality label trap in Loki, and how do you avoid it?
+
+**How to Answer:**
+
+"This is the classic Loki interview trap. Every unique label combination creates a separate stream, and Loki holds a stream open in memory — so if you label by something like `request_id` or `user_id`, you get millions of streams and Loki falls over. I keep labels to a small bounded set: app, namespace, environment, level, maybe pod name. Everything else — request IDs, trace IDs, user IDs — goes inside the log line as parsed fields, which LogQL can still filter on. Rule of thumb: if a label value is unbounded, it doesn't belong as a label."
+
+**Key Point:** "Unbounded label values like request IDs explode Loki's stream count — keep labels small and bounded, put the rest in the log line."
+
+---
+
+### Q12: How do you keep Elasticsearch from melting down at scale?
+
+**How to Answer:**
+
+"The two things that kill Elasticsearch clusters are unbounded index growth and bad shard counts. I use Index Lifecycle Management: hot indices for the last few days on fast disks, then roll to warm, then delete after the retention window — 30 days is typical. One index per day per log type keeps shard counts predictable, and I size shards around 20-50 GB each. I also cap the fields — dynamic mapping on messy JSON can explode the mapping and take the cluster down. Basically: lifecycle policies, sane shard sizes, and strict mappings."
+
+**Key Point:** "ILM policies for retention, one index per day, shards at 20-50 GB, and locked-down mappings — that's ES survival."
+
+---
+
+### Q13: Scenario — "Searches are suddenly slow and the cluster is yellow." How do you debug?
+
+**How to Answer:**
+
+"Yellow means unassigned replica shards, so first I check if nodes dropped out or disk watermarks tripped — Elasticsearch stops allocating when disks pass 85 percent. I'd run `GET _cluster/allocation/explain` to see exactly why a shard can't assign. If disks are the issue, I check whether ILM actually deleted old indices or if retention silently broke. Slow searches on top of that usually mean too many shards per node or a query hitting cold indices. My fix order: free disk, let shards assign, then look at shard counts and query patterns."
+
+```bash
+# first two commands in any ES incident
+curl -s 'localhost:9200/_cat/health?v'
+curl -s 'localhost:9200/_cluster/allocation/explain?pretty'
+```
+
+**Key Point:** "Yellow cluster = unassigned shards — check disk watermarks and allocation explain first, then shard counts."
+
+---
+
+*That's the full guide — 13 questions. Practice the answers out loud, then do the [hands-on lab](labs/47-centralized-logging-elk-loki-lab.md) to make it stick.*
