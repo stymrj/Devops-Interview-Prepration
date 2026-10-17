@@ -85,3 +85,56 @@
 ```
 
 **Key Point:** "Fluent Bit for lightweight Kubernetes shipping, Logstash only when you need its heavier plugin ecosystem."
+
+---
+
+## Loki and Promtail
+
+### Q7: What is Loki and how is it different from Elasticsearch?
+
+**How to Answer:**
+
+"Loki is Grafana's log aggregation system, and its big idea is that it only indexes labels — not the full log content. Elasticsearch indexes every word, which is fast for search but insanely expensive at scale. Loki just stores compressed chunks of logs and indexes metadata like `app=payments, level=error`, so it costs a fraction to run. The catch: searching inside the log text means scanning chunks, so full-text queries are slower. I reach for Loki when cost matters and most queries start from labels."
+
+**Key Point:** "Loki indexes only labels, not full text — far cheaper than Elasticsearch, slightly slower for free-text search."
+
+---
+
+### Q8: How does Promtail actually work on a node?
+
+**How to Answer:**
+
+"Promtail runs as a DaemonSet on every Kubernetes node and tails the container log files the kubelet writes under `/var/log/pods`. For each log line it attaches labels — namespace, pod name, container name — from the file path or Kubernetes metadata. Then it batches and pushes those labeled streams to Loki over HTTP. It's deliberately dumb: no parsing, no indexing, just attach labels and ship. That simplicity is why it's so cheap to run at scale."
+
+```yaml
+# promtail config snippet: scrape pod logs, add k8s labels
+scrape_configs:
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+```
+
+**Key Point:** "Promtail tails pod log files, attaches Kubernetes labels, and pushes streams to Loki — collect and label, nothing more."
+
+---
+
+### Q9: How do you query logs in Loki — what's LogQL?
+
+**How to Answer:**
+
+"LogQL looks a lot like PromQL, which makes it easy if you already know Prometheus. You start with a label selector like `{app='payments', level='error'}` — that's the fast part because labels are indexed. Then you pipe filters: `|= 'timeout'` keeps lines containing timeout, `!= 'healthcheck'` drops noise, and `| json` parses JSON fields so you can filter on them. For counts over time you wrap it: `count_over_time({app='payments'} |= 'error' [5m])`. The rule I follow: filter by labels first, text second — text-only searches scan everything and crawl."
+
+**Key Point:** "Labels first for speed, pipe filters for text — `{app='x'} |= 'error'` is the LogQL pattern to know."
+
+---
+
+### Q10: When would you pick ELK over Loki, and vice versa?
+
+**How to Answer:**
+
+"I'd pick ELK when the team needs heavy full-text search — compliance teams digging through arbitrary log text, or legacy apps with messy unstructured logs. Elasticsearch's full indexing pays off there. I'd pick Loki when the stack is already Prometheus and Grafana, logs are structured, and cost is a real constraint — which honestly describes most startups I've seen. The operational difference is real too: running Elasticsearch well takes a dedicated person, Loki mostly just runs. Interviewers want to hear that it's a cost-vs-search-power tradeoff, not a religious choice."
+
+**Key Point:** "ELK for heavy full-text search and messy logs, Loki for cost-effective structured logging in Prometheus/Grafana shops."
