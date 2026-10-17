@@ -16,7 +16,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 6 | [CI/CD](ci-cd/) | 5/5 |
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | 5/5 |
 | 8 | [Cloud (AWS)](cloud-aws/) | 7/7 |
-| 9 | [Monitoring & Logging](monitoring-logging/) | 3/4 |
+| 9 | [Monitoring & Logging](monitoring-logging/) | 4/4 |
 | 10 | [Networking & Security](networking-security/) | ⬜ |
 | 11 | [Best Practices](best-practices/) | ⬜ |
 | 12 | [Mock Interviews](mock-interviews/) | ⬜ |
@@ -72,6 +72,7 @@ A new guide lands here every day. Progress so far:
 - [x] 45 — [Prometheus & PromQL](monitoring-logging/45-prometheus-promql.md) (+ [hands-on lab](monitoring-logging/labs/45-prometheus-promql-lab.md), [cheat sheet](monitoring-logging/cheat-sheets/45-prometheus-promql-cheatsheet.md))
 - [x] 46 — [Grafana Dashboards & Alerting](monitoring-logging/46-grafana-dashboards-alerting.md) (+ [hands-on lab](monitoring-logging/labs/46-grafana-dashboards-alerting-lab.md), [cheat sheet](monitoring-logging/cheat-sheets/46-grafana-dashboards-alerting-cheatsheet.md))
 - [x] 47 — [Centralized Logging (ELK / Loki + Promtail)](monitoring-logging/47-centralized-logging-elk-loki.md) (+ [hands-on lab](monitoring-logging/labs/47-centralized-logging-elk-loki-lab.md), [cheat sheet](monitoring-logging/cheat-sheets/47-centralized-logging-elk-loki-cheatsheet.md))
+- [x] 48 — [OpenTelemetry & Distributed Tracing](monitoring-logging/48-opentelemetry-distributed-tracing.md) (+ [hands-on lab](monitoring-logging/labs/48-opentelemetry-distributed-tracing-lab.md), [cheat sheet](monitoring-logging/cheat-sheets/48-opentelemetry-distributed-tracing-cheatsheet.md))
 
 ---
 
