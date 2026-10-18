@@ -118,3 +118,71 @@ dig api.example.com +trace                        # full referral chain
 **Key Point:** "dig against a public resolver, then +trace the chain, then check the local resolver config — it's stale cache, zone file syntax, or search domains 90% of the time."
 
 ---
+
+## TLS Deep Dive
+
+### Q9: Walk me through the TLS handshake.
+
+**How to Answer:**
+
+"The client sends a ClientHello with its TLS version and cipher list. The server replies with its certificate and picks a cipher. Then they run a key exchange — in TLS 1.3 this is folded into the first two flights — derive session keys, and everything after that is encrypted. By the third round trip, application data is flowing."
+
+"The interview-worthy detail: the client validates the certificate against its trust store — expiry, hostname match, chain to a trusted root — before trusting anything. If any of those checks fail, the connection dies. The handshake is the slow part, which is why TLS 1.3 cutting it to one round trip matters at scale."
+
+**Key Point:** "ClientHello, server certificate, key exchange, encrypted session — and the client validates expiry, hostname, and chain before trusting anything."
+
+---
+
+### Q10: What's the difference between TLS 1.2 and 1.3, and why should I care?
+
+**How to Answer:**
+
+"TLS 1.3 removed all the legacy junk — RSA key exchange, CBC ciphers, static DH — so there's a smaller attack surface and fewer ways to misconfigure. Handshake went from two round trips to one, and session resumption is now 0-RTT. It also encrypts the handshake itself much earlier, so less metadata leaks."
+
+"In practice: if your infra still negotiates 1.2, it works but you're leaving latency and security on the table, and some of those old cipher suites are the ones PCI auditors flag. My rule is 1.2 minimum, 1.3 preferred, and I kill anything older at the load balancer."
+
+**Key Point:** "TLS 1.3: faster 1-RTT handshake, legacy ciphers removed, encrypted handshake metadata — enforce 1.2 minimum and prefer 1.3."
+
+---
+
+### Q11: What's in a certificate chain, and what breaks in production?
+
+**How to Answer:**
+
+"Leaf certificate for your domain, one or more intermediates, then the root that browsers trust. The server has to send the leaf plus the intermediates — if it only sends the leaf, clients that don't have the intermediate cached fail the chain. I've seen this as a 'works in Chrome, fails in curl' bug because Chrome had the intermediate cached."
+
+"The classic production breakage is expiry — Let's Encrypt's 90-day certs renew automatically until the day the cron breaks, and suddenly the API is down at 3am. I monitor cert expiry with alerts at 30 and 7 days out, and I always test the full chain with `openssl s_client`, not just that the page loads."
+
+```bash
+echo | openssl s_client -connect api.example.com:443 -servername api.example.com 2>/dev/null | openssl x509 -noout -dates
+```
+
+**Key Point:** "Serve the full chain including intermediates, and alert on expiry well before 90-day certs die — 'works in Chrome, fails in curl' means a missing intermediate."
+
+---
+
+### Q12: What is SNI, and why does it exist?
+
+**How to Answer:**
+
+"Before TLS existed for shared hosting, the server couldn't know which certificate to present because the Host header is inside the encrypted stream. SNI fixes that: the client puts the hostname in the ClientHello, in plaintext, so the server picks the right cert for that domain."
+
+"This is how one IP serves a hundred HTTPS sites — ALBs, ingress controllers, and CDNs all route on SNI. The tradeoff is privacy: that hostname travels unencrypted, so anyone watching the wire sees which domain you're hitting. That's the problem Encrypted Client Hello is trying to solve."
+
+**Key Point:** "SNI puts the hostname in the plaintext ClientHello so one IP can serve many certs — at the cost of leaking the domain to network observers."
+
+---
+
+### Q13: Where do you terminate TLS in production — load balancer, ingress, or app?
+
+**How to Answer:**
+
+"I terminate at the edge — ALB, Cloudflare, or the ingress controller — because TLS is CPU-heavy and managing certs in one place beats doing it in every pod. Behind that, traffic to pods is either plain HTTP inside a private VPC or re-encrypted if the compliance team demands end-to-end encryption."
+
+"Cert provisioning is automated: cert-manager with Let's Encrypt in Kubernetes, ACM on ALB with auto-renewal. I never hand-roll cert distribution. And when someone says 'just terminate in the app,' I ask how they're rotating keys across fifty replicas without a restart — that's the argument that ends the debate."
+
+**Key Point:** "Terminate TLS at the edge with automated cert management — managing certificates inside every app instance doesn't scale."
+
+---
+
+*Related: [hands-on lab](labs/49-dns-tls-ssl-in-depth-lab.md) · [cheat sheet](cheat-sheets/49-dns-tls-ssl-in-depth-cheatsheet.md)*
