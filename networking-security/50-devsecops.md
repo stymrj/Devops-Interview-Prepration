@@ -118,3 +118,106 @@ docker run -t zaproxy/zap-stable zap-baseline.py -t https://staging.example.com
 **Key Point:** "SAST catches code bugs early, DAST catches runtime bugs late — you need both, neither replaces a pen test."
 
 ---
+## Container Image Scanning
+
+### Q7: How do you scan container images in a CI pipeline?
+
+**How to Answer:**
+
+"Every image gets scanned before it can reach production. Trivy is my go-to — it's fast, free, and covers OS packages plus language dependencies in one pass."
+
+"My pipeline builds the image, scans it, and fails the build on high or critical CVEs that have fixes available. The 'fix available' filter is key, otherwise you block on vulnerabilities nobody can patch yet."
+
+"For ongoing risk, I also scan images on a schedule — base images get CVEs published after you build, so a scan that was clean on Monday can be dirty by Friday."
+
+```bash
+trivy image --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed myapp:latest
+```
+
+**Key Point:** "Scan on build AND on a schedule — CVEs get published after your build date."
+
+---
+
+### Q8: What is a CVE, and how do you decide what to block the build on?
+
+**How to Answer:**
+
+"A CVE is a known vulnerability with an ID — like CVE-2024-1234 — and a severity score from 1 to 10. The score tells you how bad it is; exploitability tells you whether it actually matters."
+
+"I gate builds on high and critical CVEs with an available fix. Low and medium go on a dashboard for the next sprint. And I always check exploitability — a critical CVE in a library function my app never calls is a ticket, not an emergency."
+
+"New engineers often think zero CVEs is the goal. It's not — the goal is knowing about every CVE and deciding deliberately. An ignored scan is just a false sense of security."
+
+**Key Point:** "Block on high/critical with fixes; track exploitability, not just scores."
+
+---
+
+## SBOM and Supply Chain Security
+
+### Q9: What is an SBOM and why do teams generate one?
+
+**How to Answer:**
+
+"An SBOM is a software bill of materials — a machine-readable list of every component inside your software, like an ingredients label. It's usually in SPDX or CycloneDX format."
+
+"Its real value showed up during Log4Shell. Teams with SBOMs knew in minutes whether they were exposed; teams without them spent days grepping repos. It's an inventory problem, and attackers don't wait for manual audits."
+
+"I generate one for every release with syft and store it next to the artifact. Some customers and regulations now require it, but I'd do it anyway for my own incident response."
+
+```bash
+syft myapp:latest -o cyclonedx-json > sbom.json
+```
+
+**Key Point:** "SBOMs turn 'are we affected?' from a week of grepping into a one-minute query."
+
+---
+
+### Q10: How do you protect against software supply chain attacks?
+
+**How to Answer:**
+
+"Supply chain attacks come through your dependencies — a compromised npm package or a poisoned base image. Your code is clean; everything you downloaded isn't."
+
+"My defenses: pin exact dependency versions with lockfiles, verify image signatures with cosign, pull base images only from trusted registries, and scan everything — OS packages and language deps — on every build."
+
+"I also reduce the attack surface with minimal base images like distroless. A smaller image has fewer packages to have CVEs, and no shell for an attacker to play with if they do get in."
+
+**Key Point:** "Lockfiles, signature verification, trusted registries, minimal base images — layered defense for things you download."
+
+---
+
+## Secrets and Pipeline Security Gates
+
+### Q11: How do you stop secrets from leaking into git and images?
+
+**How to Answer:**
+
+"Prevention first: gitleaks or trufflehog runs on every PR and blocks commits containing tokens, keys, or passwords. A secret that never gets committed is a secret you never have to rotate."
+
+"For runtime secrets, nothing goes in environment variables on disk or in images — I pull from a secrets manager at deploy time. Vault or AWS Secrets Manager, injected as mounted files or env vars at container start."
+
+"And assume leakage happens anyway: secrets are short-lived and rotatable. If every credential expires in 90 days, a leaked one has a limited blast radius by design."
+
+```bash
+gitleaks detect --source . --no-git -v
+```
+
+**Key Point:** "Block secrets at commit time with scanners; inject at deploy time from a secrets manager; rotate aggressively."
+
+---
+
+### Q12: How do you enforce security gates without slowing developers down?
+
+**How to Answer:**
+
+"This is the core DevSecOps tradeoff. My rule is simple: fast checks run early and everywhere, slow checks run later and asynchronously. SAST and secret scans run on the PR in seconds; DAST and deep scans run nightly on staging."
+
+"I make failures actionable — every blocked build links to the finding, the fix, and the person to ask. A gate that says 'vulnerability found' with no guidance just creates a Slack thread asking what to do."
+
+"And I measure. I track scan duration per PR, false-positive rates, and how often security gates actually change code. If a gate adds two minutes and catches real bugs, developers defend it themselves."
+
+**Key Point:** "Fast checks early, slow checks async, every failure links to its fix."
+
+---
+
+*Day 50 of 58 — networking-security subject.*
