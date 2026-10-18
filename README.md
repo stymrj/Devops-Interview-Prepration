@@ -17,7 +17,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | 5/5 |
 | 8 | [Cloud (AWS)](cloud-aws/) | 7/7 |
 | 9 | [Monitoring & Logging](monitoring-logging/) | 4/4 |
-| 10 | [Networking & Security](networking-security/) | 1/5 |
+| 10 | [Networking & Security](networking-security/) | 2/5 |
 | 11 | [Best Practices](best-practices/) | ⬜ |
 | 12 | [Mock Interviews](mock-interviews/) | ⬜ |
 
@@ -74,6 +74,7 @@ A new guide lands here every day. Progress so far:
 - [x] 47 — [Centralized Logging (ELK / Loki + Promtail)](monitoring-logging/47-centralized-logging-elk-loki.md) (+ [hands-on lab](monitoring-logging/labs/47-centralized-logging-elk-loki-lab.md), [cheat sheet](monitoring-logging/cheat-sheets/47-centralized-logging-elk-loki-cheatsheet.md))
 - [x] 48 — [OpenTelemetry & Distributed Tracing](monitoring-logging/48-opentelemetry-distributed-tracing.md) (+ [hands-on lab](monitoring-logging/labs/48-opentelemetry-distributed-tracing-lab.md), [cheat sheet](monitoring-logging/cheat-sheets/48-opentelemetry-distributed-tracing-cheatsheet.md))
 - [x] 49 — [DNS & TLS/SSL in Depth](networking-security/49-dns-tls-ssl-in-depth.md) (+ [hands-on lab](networking-security/labs/49-dns-tls-ssl-in-depth-lab.md), [cheat sheet](networking-security/cheat-sheets/49-dns-tls-ssl-in-depth-cheatsheet.md))
+- [x] 50 — [DevSecOps](networking-security/50-devsecops.md) (+ [hands-on lab](networking-security/labs/50-devsecops-lab.md), [cheat sheet](networking-security/cheat-sheets/50-devsecops-cheatsheet.md))
 
 ---
 
