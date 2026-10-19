@@ -17,7 +17,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 7 | [Infrastructure as Code](infrastructure-as-code/) | 5/5 |
 | 8 | [Cloud (AWS)](cloud-aws/) | 7/7 |
 | 9 | [Monitoring & Logging](monitoring-logging/) | 4/4 |
-| 10 | [Networking & Security](networking-security/) | 2/5 |
+| 10 | [Networking & Security](networking-security/) | 3/5 |
 | 11 | [Best Practices](best-practices/) | ⬜ |
 | 12 | [Mock Interviews](mock-interviews/) | ⬜ |
 
@@ -75,6 +75,7 @@ A new guide lands here every day. Progress so far:
 - [x] 48 — [OpenTelemetry & Distributed Tracing](monitoring-logging/48-opentelemetry-distributed-tracing.md) (+ [hands-on lab](monitoring-logging/labs/48-opentelemetry-distributed-tracing-lab.md), [cheat sheet](monitoring-logging/cheat-sheets/48-opentelemetry-distributed-tracing-cheatsheet.md))
 - [x] 49 — [DNS & TLS/SSL in Depth](networking-security/49-dns-tls-ssl-in-depth.md) (+ [hands-on lab](networking-security/labs/49-dns-tls-ssl-in-depth-lab.md), [cheat sheet](networking-security/cheat-sheets/49-dns-tls-ssl-in-depth-cheatsheet.md))
 - [x] 50 — [DevSecOps](networking-security/50-devsecops.md) (+ [hands-on lab](networking-security/labs/50-devsecops-lab.md), [cheat sheet](networking-security/cheat-sheets/50-devsecops-cheatsheet.md))
+- [x] 51 — [Secrets Management](networking-security/51-secrets-management.md) (+ [hands-on lab](networking-security/labs/51-secrets-management-lab.md), [cheat sheet](networking-security/cheat-sheets/51-secrets-management-cheatsheet.md))
 
 ---
 
