@@ -142,3 +142,160 @@ spec:
 ---
 
 *(Part 2 continues: ingress rules in practice, egress and DNS, enforcement reality.)*
+## Ingress Rules in Practice
+
+### Q8: How would you lock down an API so only the frontend can reach it?
+
+**How to Answer:**
+
+"I'd select the API pods and allow ingress only from pods labeled frontend, on the API's port. Everything else — including other namespaces — gets dropped automatically."
+
+"The shape is dead simple, and it's the pattern I reach for on every new service:"
+
+```yaml
+spec:
+  podSelector: { matchLabels: { app: api } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: frontend } }
+      ports: [{ port: 8080 }]
+```
+
+"One detail people miss: once any policy selects the API pods, ingress from *everyone else* is denied — including kube-system probes unless you add them. Health checks breaking after a policy deploy is the classic symptom."
+
+**Key Point:** "Allow the known callers and the isolation does the rest — but remember to allow your own health checks."
+
+---
+
+### Q9: How do you allow traffic from another namespace, like monitoring?
+
+**How to Answer:**
+
+"I'd combine a namespaceSelector with a podSelector inside the same rule — 'pods labeled prometheus in the namespace labeled monitoring'. The selectors AND together, so both have to match."
+
+"This is the safe way to give the monitoring team scraping access without opening the app to the whole monitoring namespace. I've also used it for a logging daemonset scraping every namespace."
+
+```yaml
+ingress:
+  - from:
+      - namespaceSelector:
+          matchLabels: { team: monitoring }
+        podSelector:
+          matchLabels: { app: prometheus }
+    ports: [{ port: 9090 }]
+```
+
+"The gotcha: namespaceSelector matches on the *namespace's* labels, so the namespace itself must be labeled — I label every namespace with `team` or `env` at creation for exactly this reason."
+
+**Key Point:** "namespaceSelector AND podSelector pin down exact sources. Label your namespaces at creation time."
+
+---
+
+### Q10: Can you do allow-listing by port ranges or protocols?
+
+**How to Answer:**
+
+"Ports are explicit — you list numbers, optionally with a protocol. There's no port-range syntax in the standard API, which is honestly fine because listing the three ports your app uses is more readable anyway."
+
+"For protocols, `protocol: TCP` is the default; you'd set UDP for things like DNS or a QUIC service. EndPort exists for ranges but needs protocol set and is rarely needed."
+
+"I'd tell the interviewer my rule of thumb: one rule entry per caller-per-port-group. It's verbose but it reads like documentation of your architecture."
+
+**Key Point:** "List exact ports, set protocol explicitly for UDP. Verbose rules read like architecture docs."
+
+---
+
+## Egress Rules and DNS
+
+### Q11: Why do egress policies break DNS if you're not careful?
+
+**How to Answer:**
+
+"This is the most famous NetworkPolicy footgun. You lock down egress to 'only the database', and suddenly your app can't resolve *any* hostname because CoreDNS lives in kube-system on port 53."
+
+"CoreDNS is a normal pod behind a service. Once egress is restricted, the DNS lookup never leaves the app's network namespace. The app fails with name-resolution errors while the database rule looks perfectly fine."
+
+"The fix is a two-rule egress: allow UDP+TCP port 53 to the kube-dns service, then allow your actual destinations. I keep this pattern as a template because I will forget it otherwise:"
+
+```yaml
+egress:
+  - to:
+      - namespaceSelector: { matchLabels: { name: kube-system } }
+        podSelector: { matchLabels: { k8s-app: kube-dns } }
+    ports:
+      - port: 53
+        protocol: UDP
+      - port: 53
+        protocol: TCP
+  - to:
+      - podSelector: { matchLabels: { app: database } }
+    ports: [{ port: 5432 }]
+```
+
+**Key Point:** "Egress policies isolate DNS too — always allow port 53 to CoreDNS or everything breaks."
+
+---
+
+### Q12: How would you prevent pods from exfiltrating data to the internet?
+
+**How to Answer:**
+
+"I'd write an egress policy that allows only the cluster-internal destinations the app needs — database, cache, service endpoints — and nothing else. No ipBlock, no 0.0.0.0/0, so external traffic simply has no allowed path."
+
+"This is the practical data-exfiltration control: a compromised app can't phone a random external IP because the CNI drops the packets. Combine it with an image-policy so attackers can't pull tooling in either."
+
+"The nuance: this stops L3 exfiltration only. If the app legitimately needs outbound HTTPS — for an API or S3 — you have to allow those CIDRs or use a proper egress proxy with FQDN filtering, which plain NetworkPolicies can't express."
+
+**Key Point:** "Allow-list egress to internal destinations only. For real FQDN-level control, layer an egress proxy or service mesh."
+
+---
+
+## Enforcement Reality and Interview Gotchas
+
+### Q13: Does every Kubernetes cluster actually enforce NetworkPolicies?
+
+**How to Answer:**
+
+"No — and this is a favorite interview trap. NetworkPolicy is just an API object. Enforcement happens in the CNI plugin, and several popular CNIs don't implement it."
+
+"Calico, Cilium, and Weave Net enforce them. Flannel, the default in a lot of tutorials and older kubeadm setups, does not. You can apply a hundred policies on Flannel and change nothing."
+
+"Before claiming a cluster is segmented, I'd run a test: spin up two pods in different namespaces, apply a deny-all, and try to ping. The first time I did this on a Flannel cluster, the ping went straight through — very educational."
+
+```bash
+kubectl run a --image=busybox -- sleep 3600
+kubectl run b --image=busybox -- sleep 3600
+kubectl apply -f deny-all.yaml
+kubectl exec a -- ping -c 2 $(kubectl get pod b -o jsonpath='{.status.podIP}')
+```
+
+**Key Point:** "Policies without an enforcing CNI are decorations. Calico and Cilium enforce; Flannel ignores them."
+
+---
+
+### Q14: NetworkPolicy applied but traffic still flows — how do you debug it?
+
+**How to Answer:**
+
+"I'd check three things in order. First, is the selector actually matching my pods — a typo in a label means the policy selects nothing and isolation never kicks in."
+
+"Second, does the CNI enforce policies at all — Flannel, or a cloud CNI with policy enforcement disabled. Third, am I testing the right direction — I once debugged 'broken ingress' for twenty minutes before realizing I'd applied an egress policy."
+
+"My fastest verification is a curl pod in the source namespace hitting the target's ClusterIP. Also `kubectl describe networkpolicy` shows which pods it selected, which usually reveals the label mismatch immediately."
+
+**Key Point:** "Debug order: label match → CNI enforcement → direction (ingress vs egress). `describe` shows what got selected."
+
+---
+
+### Q15: When would you choose a service mesh or cloud security groups instead?
+
+**How to Answer:**
+
+"NetworkPolicies are L3/L4 only — IPs and ports. If I need identity-based rules, like 'only the payments service's TLS identity can call the ledger API', or L7 path filtering, that's service mesh territory."
+
+"Similarly, traffic between the cluster and the outside world — office VPNs, RDS instances — is often better controlled at the cloud layer with security groups or VPC NACLs, because the IP is stable and the control is closer to the perimeter."
+
+"My default stack: NetworkPolicies for pod-to-pod segmentation inside the cluster, mesh mTLS for service identity and L7 policy, cloud security groups for the cluster boundary. Each tool owns the layer it's good at."
+
+**Key Point:** "NetworkPolicies own L3/L4 inside the cluster. Mesh owns identity and L7; cloud groups own the perimeter."
