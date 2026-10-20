@@ -169,3 +169,87 @@ echo | openssl s_client -connect api.internal:443 -showcerts 2>/dev/null | opens
 "Clock skew is the sneaky one — a pod whose clock is 10 minutes off will reject certs that are perfectly fine. I check NTP before I blame PKI."
 
 **Key Point:** "Expiry, chain, trust store, SAN match, clock skew — check those five before assuming anything deeper."
+---
+
+## Service Mesh mTLS
+
+### Q11: How does a service mesh like Istio implement mTLS transparently?
+
+**How to Answer:**
+
+"The app doesn't do TLS at all — a sidecar proxy sits next to every pod and handles it. Your app talks plain HTTP to localhost, the sidecar encrypts and authenticates outbound, and the receiving sidecar verifies before passing it along."
+
+"The mesh control plane runs a CA (Citadel in Istio) that issues a cert to every workload, keyed to its SPIFFE identity. The sidecars fetch fresh certs automatically and rotate them without the app knowing."
+
+"I like that the security policy is declarative — a PeerAuthentication resource says 'mTLS strict for this namespace' and the whole fleet complies. No code changes, no secret distribution."
+
+```yaml
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: payments
+spec:
+  mtls:
+    mode: STRICT
+```
+
+**Key Point:** "The app stays dumb and plaintext; the sidecar does identity, encryption, and rotation — policy enforced declaratively."
+
+---
+
+### Q12: What is SPIFFE and why does service identity need a standard?
+
+**How to Answer:**
+
+"SPIFFE is a standard for identifying workloads, not machines. A SPIFFE ID looks like `spiffe://cluster.local/ns/payments/sa/billing` — it names the namespace and service account, which survive pod restarts and IP changes."
+
+"Every mesh and cert system needs to agree on what a 'service' is before it can verify one. SPIFFE gives you that common vocabulary, and SPIRE is the runtime that hands out the SVIDs — the actual certs carrying those IDs."
+
+"Without a standard, every platform invents its own identity scheme and they can't interoperate. The interview point: workload identity must be portable and platform-agnostic."
+
+**Key Point:** "SPIFFE names the workload, SPIRE issues the identity — together they make service identity portable across platforms."
+
+---
+
+### Q13: What are the failure modes of mesh mTLS in a real cluster?
+
+**How to Answer:**
+
+"The big one is mixed mode — half your fleet in STRICT, half in PERMISSIVE — where some sidecars can't talk mTLS and calls silently fall back or break. I'd enforce strict mode per namespace and audit for permissive stragglers."
+
+"Then there's the CA: if the mesh CA goes down, certs can't renew, and you get a ticking clock until everything expires. The CA is a single point of trust, so it gets the HA treatment."
+
+"And the classic gotcha: mTLS between services but plaintext health checks or metrics scrapers that now fail because the sidecar intercepts everything. You learn to exclude those ports or add exceptions, usually at 2 AM."
+
+**Key Point:** "Audit for mixed modes, protect the CA like it's critical infra, and remember the sidecar intercepts your health checks too."
+
+---
+
+## Zero Trust Beyond Certificates
+
+### Q14: What does zero trust look like for human access — SSH, dashboards, databases?
+
+**How to Answer:**
+
+"Same principle, different tools: no VPN that drops you 'inside' with broad access. Instead, identity-aware proxies — BeyondCorp-style — where every login is authenticated, device-checked, and authorized per resource."
+
+"In practice that's Teleport or Boundary for SSH and databases: you authenticate with SSO, get a short-lived certificate, and every session is logged. There's no shared bastion key floating around the team."
+
+"The shift is from network location to identity and context. Where you connect from stops mattering; who you are, what device, and what you're allowed to touch is everything."
+
+**Key Point:** "Replace the VPN moat with identity-aware proxies and short-lived certs — location stops being a credential."
+
+---
+
+### Q15: How do I sell zero trust to a team that says "our VPC is private, we're fine"?
+
+**How to Answer:**
+
+"I'd start with the threat model, not the tools: private VPCs get breached through stolen credentials, compromised CI runners, and supply-chain attacks — all of which land 'inside' the moat with legitimate-looking access."
+
+"Then I'd show the blast-radius math: one compromised credential in a flat network means every service is reachable. With mTLS and least-privilege, that same credential opens one door, not all of them."
+
+"And I'd be honest about cost — zero trust adds operational complexity. So I pitch it incrementally: mTLS on the critical path first, identity-aware access for humans second, and default-deny network policies as the cheap early win."
+
+**Key Point:** "Attackers don't break the moat anymore — they log in through it. Sell zero trust as blast-radius math, rolled out incrementally."
