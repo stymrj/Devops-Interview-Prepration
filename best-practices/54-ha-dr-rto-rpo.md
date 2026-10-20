@@ -83,3 +83,75 @@
 "I like putting both numbers on one slide for stakeholders: cost of downtime per hour on the left, cost of each protection tier on the right. The conversation becomes rational very fast."
 
 **Key Point:** "DR is insurance — buy a policy sized to the asset, not to your anxiety."
+
+---
+
+## Designing for High Availability
+
+### Q6: What's the difference between high availability and disaster recovery?
+
+**How to Answer:**
+
+"High availability keeps you up through *expected* failures — a dead node, a bad deploy, an AZ outage. Disaster recovery brings you back from the *unexpected* — a whole region gone, data corruption, ransomware."
+
+"HA is measured in nines and handles the Tuesday problems automatically. DR is measured in RTO/RPO and handles the once-a-decade problems with a runbook and humans."
+
+"The confusion costs people money: they buy a second region thinking they've bought DR, then discover nobody ever tested the failover and the DNS TTL was 24 hours."
+
+**Key Point:** "HA survives the ordinary. DR survives the extraordinary. You need both, and they're different muscles."
+
+---
+
+### Q7: How many 9s do I actually need, and what do they cost?
+
+**How to Answer:**
+
+"Three 9s — 99.9% — is about 8.7 hours of downtime a year. Four 9s is 52 minutes. Five 9s is five minutes. Each extra nine roughly multiplies your complexity and cost."
+
+"Most internal tools are fine at 99.9%. Customer-facing checkout at a big retailer might justify 99.99%. Five 9s is for things like payment authorization networks, and they pay accordingly."
+
+"The honest interview answer: you pick nines from revenue impact, not pride. I've seen teams chase 99.99% for a service that was down for days unnoticed because nobody checked the dashboard."
+
+**Key Point:** "Each extra nine costs roughly an order of magnitude — buy them where downtime bleeds revenue."
+
+---
+
+### Q8: What's an active-active setup vs active-passive?
+
+**How to Answer:**
+
+"Active-active runs traffic in two or more places at once — both serve reads and writes. Active-passive keeps one side warm while the other idles, taking over only on failure."
+
+"Active-active gives you better utilization and faster failover, but it's hard: you need conflict resolution for writes, data replication that's near-instant, and routing that stays consistent."
+
+"Active-passive is simpler and cheaper, but failover is a bigger event — DNS flips, caches are cold, and the first five minutes are ugly. Most teams start here and only go active-active when the traffic math demands it."
+
+**Key Point:** "Active-active is two engines running; active-passive is one engine and a spare in the trunk."
+
+---
+
+### Q9: How do multi-AZ deployments protect you, and where do they stop?
+
+**How to Answer:**
+
+"Multiple availability zones protect you from datacenter-level failures — power, cooling, a bad network switch. Your app runs in three AZs, one dies, traffic shifts. The user never notices."
+
+"They don't protect you from a bad deploy, because the same broken image goes to all three AZs. They don't protect you from data corruption or a region-wide outage either."
+
+"So multi-AZ is your first line of HA, not your DR plan. I always say: AZs protect against hardware. Regions protect against everything else."
+
+**Key Point:** "Multi-AZ survives a dead building. It won't save you from your own code."
+
+---
+
+### Q10: What do I need to make a database highly available?
+
+**How to Answer:**
+
+"You need a primary that accepts writes, synchronous or near-synchronous replicas that can take over, and automated failover that actually promotes one of them without you typing commands at 3 AM."
+
+"The failover piece is where teams fail. A standby that nobody ever promoted is just an expensive copy. You need health checks, a promotion mechanism, and application connections that follow the new primary."
+
+"And test it. I've seen failover setups where the DNS record for the writer endpoint was hardcoded in three places. The replica promoted fine and the app still talked to the dead box."
+
+**Key Point:** "A standby you can't automatically promote is decoration — the failover path is the feature, not the replica."
