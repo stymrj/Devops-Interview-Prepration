@@ -18,7 +18,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 8 | [Cloud (AWS)](cloud-aws/) | 7/7 |
 | 9 | [Monitoring & Logging](monitoring-logging/) | 4/4 |
 | 10 | [Networking & Security](networking-security/) | 5/5 |
-| 11 | [Best Practices](best-practices/) | 2/3 |
+| 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | ⬜ |
 
 ## Publishing log
@@ -80,6 +80,7 @@ A new guide lands here every day. Progress so far:
 - [x] 53 — [Zero Trust & mTLS Basics](networking-security/53-zero-trust-mtls-basics.md) (+ [hands-on lab](networking-security/labs/53-zero-trust-mtls-basics-lab.md), [cheat sheet](networking-security/cheat-sheets/53-zero-trust-mtls-basics-cheatsheet.md))
 - [x] 54 — [High Availability & Disaster Recovery](best-practices/54-ha-dr-rto-rpo.md) (+ [hands-on lab](best-practices/labs/54-ha-dr-rto-rpo-lab.md), [cheat sheet](best-practices/cheat-sheets/54-ha-dr-rto-rpo-cheatsheet.md))
 - [x] 55 — [FinOps & Cloud Cost Optimization](best-practices/55-finops-cloud-cost-optimization.md) (+ [hands-on lab](best-practices/labs/55-finops-cloud-cost-optimization-lab.md), [cheat sheet](best-practices/cheat-sheets/55-finops-cloud-cost-optimization-cheatsheet.md))
+- [x] 56 — [Incident Management & Blameless Postmortems](best-practices/56-incident-management-and-blameless-postmortems.md) (+ [hands-on lab](best-practices/labs/56-incident-management-and-blameless-postmortems-lab.md), [cheat sheet](best-practices/cheat-sheets/56-incident-management-and-blameless-postmortems-cheatsheet.md))
 
 ---
 
