@@ -105,3 +105,94 @@ aws resourcegroupstaggingapi get-resources \
 "Then I find who owns it and fix the root cause — resize, schedule, or delete — and I put an anomaly alert in place so we hear about it in hours, not at month-end."
 
 **Key Point:** "A bill spike is a debugging exercise — segment first, then blame the resource, not the team."
+
+## Cutting Real Spend
+
+### Q7: How do you rightsize instances in practice?
+
+**How to Answer:**
+
+"I look at actual utilization, not the request. CloudWatch or the CSP's rightsizing recommendations show me instances running at 10% CPU for weeks."
+
+"The pattern I see constantly: someone provisions for peak, then peak never comes back. I drop one size, watch for a week, and repeat. Do it in small steps — nobody gets fired for shrinking a VM slowly."
+
+"For the confident cases I use tools like AWS Compute Optimizer. But I always sanity-check against the application — a CPU-bound batch job and an idle web server read differently at the same utilization number."
+
+**Key Point:** "Rightsizing is boring and it works — most fleets are one to two sizes too big."
+
+---
+
+### Q8: How do you find and kill idle or orphaned resources?
+
+**How to Answer:**
+
+"I hunt for four things on a schedule: unattached EBS volumes, old snapshots, unattached Elastic IPs, and stopped-but-not-terminated instances. They bleed money quietly."
+
+"I automate it — a weekly Lambda or a Terraform-managed script that lists candidates and tags them for review, then deletes after a grace period. Humans review, automation deletes."
+
+```bash
+# List EBS volumes that aren't attached to anything
+aws ec2 describe-volumes \
+  --filters Name=status,Values=available \
+  --query 'Volumes[].{Id:VolumeId,Size:Size,Created:CreateTime}'
+```
+
+**Key Point:** "Orphaned resources are the silent tax on every cloud bill — hunt them on a schedule."
+
+---
+
+### Q9: How do you cut storage costs — S3, snapshots, backups?
+
+**How to Answer:**
+
+"Storage is usually the second-largest line item and the easiest to cut. First: lifecycle policies — move anything older than 30-90 days to Infrequent Access or Glacier based on access patterns."
+
+"Second: S3 Intelligent-Tiering for data with unpredictable access. It moves objects between tiers automatically and the monitoring fee is tiny compared to getting it wrong manually."
+
+"Third: audit versioning and old snapshots. A bucket with versioning on and no lifecycle rule is a storage landfill. I cap noncurrent versions at a sane number and expire incomplete multipart uploads."
+
+**Key Point:** "Most storage savings come from lifecycle rules, not cheaper tiers — automate the aging."
+
+---
+
+### Q10: What cost monitoring and alerts do you set up?
+
+**How to Answer:**
+
+"I start with AWS Budgets on every account — a monthly budget at expected spend, with alerts at 80%, 100%, and 120%. That catches the slow creep."
+
+"Then I add anomaly detection. Cost Anomaly Detection learns the pattern per service and pings Slack when something deviates. That's what catches the 3 AM GPU instance."
+
+"For real visibility I build a dashboard: spend by service, by team tag, and trend versus last month. I send the team-level numbers to each team weekly. People optimize what they can see."
+
+**Key Point:** "Budgets catch the slow bleed, anomaly alerts catch the spikes — run both."
+
+---
+
+## Culture and Guardrails
+
+### Q11: How do you do FinOps in Kubernetes?
+
+**How to Answer:**
+
+"Kubernetes hides cost behind shared clusters, so the first step is attribution. I use OpenCost or Kubecost to map namespace and label spend back to teams."
+
+"The biggest win is usually requests and limits. Without limits, one team's memory leak eats the whole node pool. With requests set sanely, the scheduler packs better and you need fewer nodes."
+
+"Then: cluster autoscaler plus scale-to-zero for dev namespaces, spot node groups for non-critical workloads, and image size discipline — smaller images pull faster and cost less to store and transfer."
+
+**Key Point:** "In Kubernetes, requests and limits ARE your cost controls — everything else is reporting."
+
+---
+
+### Q12: Finance wants to cut 30% of the cloud budget. How do you handle it?
+
+**How to Answer:**
+
+"I treat it like an incident, not a negotiation. First I show them where the money actually goes — service by service, team by team. Most of the time the number is in three or four line items."
+
+"I don't start by cutting reliability. I cut waste first: idle resources, oversized instances, storage without lifecycle rules, dev environments that run 24/7. That alone usually gets 15-25% without touching production."
+
+"If the target needs real trade-offs — like downgrading a multi-AZ deployment — I make finance sign off on the risk in writing. Cost cuts have availability consequences, and the business should own that decision."
+
+**Key Point:** "Cut waste before you cut reliability — and make the business own any trade-off in writing."
