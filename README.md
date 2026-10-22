@@ -19,7 +19,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 9 | [Monitoring & Logging](monitoring-logging/) | 4/4 |
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
-| 12 | [Mock Interviews](mock-interviews/) | ⬜ |
+| 12 | [Mock Interviews](mock-interviews/) | 1/2 |
 
 ## Publishing log
 
@@ -81,6 +81,7 @@ A new guide lands here every day. Progress so far:
 - [x] 54 — [High Availability & Disaster Recovery](best-practices/54-ha-dr-rto-rpo.md) (+ [hands-on lab](best-practices/labs/54-ha-dr-rto-rpo-lab.md), [cheat sheet](best-practices/cheat-sheets/54-ha-dr-rto-rpo-cheatsheet.md))
 - [x] 55 — [FinOps & Cloud Cost Optimization](best-practices/55-finops-cloud-cost-optimization.md) (+ [hands-on lab](best-practices/labs/55-finops-cloud-cost-optimization-lab.md), [cheat sheet](best-practices/cheat-sheets/55-finops-cloud-cost-optimization-cheatsheet.md))
 - [x] 56 — [Incident Management & Blameless Postmortems](best-practices/56-incident-management-and-blameless-postmortems.md) (+ [hands-on lab](best-practices/labs/56-incident-management-and-blameless-postmortems-lab.md), [cheat sheet](best-practices/cheat-sheets/56-incident-management-and-blameless-postmortems-cheatsheet.md))
+- [x] 57 — [Live Outage Triage Scenarios](mock-interviews/57-live-outage-triage-scenarios.md) (+ [hands-on lab](mock-interviews/labs/57-live-outage-triage-scenarios-lab.md), [cheat sheet](mock-interviews/cheat-sheets/57-live-outage-triage-scenarios-cheatsheet.md))
 
 ---
 
