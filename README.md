@@ -20,6 +20,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | 2/2 |
+| 13 | [Advanced Topics](advanced-topics/) | 1/10 |
 
 ## Publishing log
 
@@ -83,6 +84,7 @@ A new guide lands here every day. Progress so far:
 - [x] 56 — [Incident Management & Blameless Postmortems](best-practices/56-incident-management-and-blameless-postmortems.md) (+ [hands-on lab](best-practices/labs/56-incident-management-and-blameless-postmortems-lab.md), [cheat sheet](best-practices/cheat-sheets/56-incident-management-and-blameless-postmortems-cheatsheet.md))
 - [x] 57 — [Live Outage Triage Scenarios](mock-interviews/57-live-outage-triage-scenarios.md) (+ [hands-on lab](mock-interviews/labs/57-live-outage-triage-scenarios-lab.md), [cheat sheet](mock-interviews/cheat-sheets/57-live-outage-triage-scenarios-cheatsheet.md))
 - [x] 58 — [DevOps System Design Round](mock-interviews/58-devops-system-design-round.md) (+ [hands-on lab](mock-interviews/labs/58-devops-system-design-round-lab.md), [cheat sheet](mock-interviews/cheat-sheets/58-devops-system-design-round-cheatsheet.md))
+- [x] 59 — [Service Mesh Deep Dive](advanced-topics/59-service-mesh-deep-dive.md) (+ [hands-on lab](advanced-topics/labs/59-service-mesh-lab.md), [cheat sheet](advanced-topics/cheat-sheets/59-service-mesh-cheatsheet.md))
 
 ---
 
