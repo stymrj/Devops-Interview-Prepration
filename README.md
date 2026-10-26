@@ -20,7 +20,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | 2/2 |
-| 13 | [Advanced Topics](advanced-topics/) | 2/10 |
+| 13 | [Advanced Topics](advanced-topics/) | 3/10 |
 
 ## Publishing log
 
@@ -86,6 +86,7 @@ A new guide lands here every day. Progress so far:
 - [x] 58 — [DevOps System Design Round](mock-interviews/58-devops-system-design-round.md) (+ [hands-on lab](mock-interviews/labs/58-devops-system-design-round-lab.md), [cheat sheet](mock-interviews/cheat-sheets/58-devops-system-design-round-cheatsheet.md))
 - [x] 59 — [Service Mesh Deep Dive](advanced-topics/59-service-mesh-deep-dive.md) (+ [hands-on lab](advanced-topics/labs/59-service-mesh-lab.md), [cheat sheet](advanced-topics/cheat-sheets/59-service-mesh-cheatsheet.md))
 - [x] 60 — [Progressive Delivery (Argo Rollouts & Flagger)](advanced-topics/60-progressive-delivery.md) (+ [hands-on lab](advanced-topics/labs/60-progressive-delivery-lab.md), [cheat sheet](advanced-topics/cheat-sheets/60-progressive-delivery-cheatsheet.md))
+- [x] 61 — [Kubernetes Operators & CRDs](advanced-topics/61-kubernetes-operators-crds.md) (+ [hands-on lab](advanced-topics/labs/61-kubernetes-operators-crds-lab.md), [cheat sheet](advanced-topics/cheat-sheets/61-kubernetes-operators-crds-cheatsheet.md))
 
 ---
 
