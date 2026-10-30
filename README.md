@@ -20,7 +20,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | 2/2 |
-| 13 | [Advanced Topics](advanced-topics/) | 6/10 |
+| 13 | [Advanced Topics](advanced-topics/) | 7/10 |
 
 ## Publishing log
 
@@ -90,6 +90,7 @@ A new guide lands here every day. Progress so far:
 - [x] 62 — [Policy as Code (OPA & Kyverno)](advanced-topics/62-policy-as-code.md) (+ [hands-on lab](advanced-topics/labs/62-policy-as-code-lab.md), [cheat sheet](advanced-topics/cheat-sheets/62-policy-as-code-cheatsheet.md))
 - [x] 63 — [Chaos Engineering in Practice](advanced-topics/63-chaos-engineering-in-practice.md) (+ [hands-on lab](advanced-topics/labs/63-chaos-engineering-lab.md), [cheat sheet](advanced-topics/cheat-sheets/63-chaos-engineering-cheatsheet.md))
 - [x] 64 — [Platform Engineering & IDPs](advanced-topics/64-platform-engineering-idps.md) (+ [hands-on lab](advanced-topics/labs/64-platform-engineering-idps-lab.md), [cheat sheet](advanced-topics/cheat-sheets/64-platform-engineering-idps-cheatsheet.md))
+- [x] 65 — [GitOps at Scale (ArgoCD ApplicationSets)](advanced-topics/65-gitops-at-scale.md) (+ [hands-on lab](advanced-topics/labs/65-gitops-at-scale-lab.md), [cheat sheet](advanced-topics/cheat-sheets/65-gitops-at-scale-cheatsheet.md))
 
 ---
 
