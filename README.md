@@ -20,7 +20,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | 2/2 |
-| 13 | [Advanced Topics](advanced-topics/) | 8/10 |
+| 13 | [Advanced Topics](advanced-topics/) | 9/10 |
 
 ## Publishing log
 
@@ -92,6 +92,7 @@ A new guide lands here every day. Progress so far:
 - [x] 64 — [Platform Engineering & IDPs](advanced-topics/64-platform-engineering-idps.md) (+ [hands-on lab](advanced-topics/labs/64-platform-engineering-idps-lab.md), [cheat sheet](advanced-topics/cheat-sheets/64-platform-engineering-idps-cheatsheet.md))
 - [x] 65 — [GitOps at Scale (ArgoCD ApplicationSets)](advanced-topics/65-gitops-at-scale.md) (+ [hands-on lab](advanced-topics/labs/65-gitops-at-scale-lab.md), [cheat sheet](advanced-topics/cheat-sheets/65-gitops-at-scale-cheatsheet.md))
 - [x] 66 — [AWS EKS Production Deep Dive](advanced-topics/66-aws-eks-production-deep-dive.md) (+ [hands-on lab](advanced-topics/labs/66-aws-eks-production-deep-dive-lab.md), [cheat sheet](advanced-topics/cheat-sheets/66-aws-eks-production-deep-dive-cheatsheet.md))
+- [x] 67 — [Observability Cost & Cardinality](advanced-topics/67-observability-cost-cardinality.md) (+ [hands-on lab](advanced-topics/labs/67-observability-cost-cardinality-lab.md), [cheat sheet](advanced-topics/cheat-sheets/67-observability-cost-cardinality-cheatsheet.md))
 
 ---
 
