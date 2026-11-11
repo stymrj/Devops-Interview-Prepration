@@ -20,7 +20,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | 2/2 |
-| 13 | [Advanced Topics](advanced-topics/) | 10/10 |
+| 13 | [Advanced Topics](advanced-topics/) | 11/11 |
 
 ## Publishing log
 
@@ -94,6 +94,7 @@ A new guide lands here every day. Progress so far:
 - [x] 66 — [AWS EKS Production Deep Dive](advanced-topics/66-aws-eks-production-deep-dive.md) (+ [hands-on lab](advanced-topics/labs/66-aws-eks-production-deep-dive-lab.md), [cheat sheet](advanced-topics/cheat-sheets/66-aws-eks-production-deep-dive-cheatsheet.md))
 - [x] 67 — [Observability Cost & Cardinality](advanced-topics/67-observability-cost-cardinality.md) (+ [hands-on lab](advanced-topics/labs/67-observability-cost-cardinality-lab.md), [cheat sheet](advanced-topics/cheat-sheets/67-observability-cost-cardinality-cheatsheet.md))
 - [x] 68 — [Database Reliability for DevOps](advanced-topics/68-database-reliability-for-devops.md) (+ [hands-on lab](advanced-topics/labs/68-database-reliability-for-devops-lab.md), [cheat sheet](advanced-topics/cheat-sheets/68-database-reliability-for-devops-cheatsheet.md))
+- [x] 69 — [DevOps Career & Behavioral Round](advanced-topics/69-devops-career-behavioral-round.md) (+ [hands-on lab](advanced-topics/labs/69-devops-career-behavioral-round-lab.md), [cheat sheet](advanced-topics/cheat-sheets/69-devops-career-behavioral-round-cheatsheet.md))
 
 ---
 
