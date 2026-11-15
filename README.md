@@ -20,7 +20,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | 2/2 |
-| 13 | [Advanced Topics](advanced-topics/) | 14/14 |
+| 13 | [Advanced Topics](advanced-topics/) | 15/15 |
 
 ## Publishing log
 
@@ -98,6 +98,7 @@ A new guide lands here every day. Progress so far:
 - [x] 70 — [Supply Chain Security (SLSA, Sigstore & SBOM)](advanced-topics/70-supply-chain-security.md) (+ [hands-on lab](advanced-topics/labs/70-supply-chain-security-lab.md), [cheat sheet](advanced-topics/cheat-sheets/70-supply-chain-security-cheatsheet.md))
 - [x] 71 — [Infrastructure Testing & Drift Detection](advanced-topics/71-infrastructure-testing-drift-detection.md) (+ [hands-on lab](advanced-topics/labs/71-infrastructure-testing-drift-detection-lab.md), [cheat sheet](advanced-topics/cheat-sheets/71-infrastructure-testing-drift-detection-cheatsheet.md))
 - [x] 72 — [Secrets Management at Scale: Rotation, Dynamic Secrets & Workload Identity](advanced-topics/72-secrets-management-at-scale.md) (+ [hands-on lab](advanced-topics/labs/72-secrets-management-at-scale-lab.md), [cheat sheet](advanced-topics/cheat-sheets/72-secrets-management-at-scale-cheatsheet.md))
+- [x] 73 — [Incident Response & On-Call Engineering: Paging, Incident Command & Sustainable Rotations](advanced-topics/73-incident-response-on-call-engineering.md) (+ [hands-on lab](advanced-topics/labs/73-incident-response-on-call-engineering-lab.md), [cheat sheet](advanced-topics/cheat-sheets/73-incident-response-on-call-engineering-cheatsheet.md))
 
 ---
 
