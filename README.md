@@ -20,7 +20,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | 2/2 |
-| 13 | [Advanced Topics](advanced-topics/) | 18/18 |
+| 13 | [Advanced Topics](advanced-topics/) | 19/19 |
 
 ## Publishing log
 
@@ -102,6 +102,7 @@ A new guide lands here every day. Progress so far:
 - [x] 74 — [Multi-Cloud & Hybrid Cloud Operations: Networking, Identity & Day-2 Reality](advanced-topics/74-multi-cloud-hybrid-cloud-operations.md) (+ [hands-on lab](advanced-topics/labs/74-multi-cloud-hybrid-cloud-operations-lab.md), [cheat sheet](advanced-topics/cheat-sheets/74-multi-cloud-hybrid-cloud-operations-cheatsheet.md))
 - [x] 75 — [Disaster Recovery & Business Continuity for DevOps](advanced-topics/75-disaster-recovery-business-continuity.md) (+ [hands-on lab](advanced-topics/labs/75-disaster-recovery-business-continuity-lab.md), [cheat sheet](advanced-topics/cheat-sheets/75-disaster-recovery-business-continuity-cheatsheet.md))
 - [x] 76 — [Kubernetes Networking Deep Dive: CNI, Ingress & Gateway API in Production](advanced-topics/76-kubernetes-networking-deep-dive.md) (+ [hands-on lab](advanced-topics/labs/76-kubernetes-networking-deep-dive-lab.md), [cheat sheet](advanced-topics/cheat-sheets/76-kubernetes-networking-deep-dive-cheatsheet.md))
+- [x] 77 — [Load Testing & Performance Engineering at Scale](advanced-topics/77-load-testing-performance-engineering.md) (+ [hands-on lab](advanced-topics/labs/77-load-testing-performance-engineering-lab.md), [cheat sheet](advanced-topics/cheat-sheets/77-load-testing-performance-engineering-cheatsheet.md))
 
 ---
 
