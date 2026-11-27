@@ -20,7 +20,7 @@ Every guide follows one format: **question → how to answer it out loud → cod
 | 10 | [Networking & Security](networking-security/) | 5/5 |
 | 11 | [Best Practices](best-practices/) | 3/3 |
 | 12 | [Mock Interviews](mock-interviews/) | 2/2 |
-| 13 | [Advanced Topics](advanced-topics/) | 20/20 |
+| 13 | [Advanced Topics](advanced-topics/) | 21/21 |
 
 ## Publishing log
 
@@ -104,6 +104,7 @@ A new guide lands here every day. Progress so far:
 - [x] 76 — [Kubernetes Networking Deep Dive: CNI, Ingress & Gateway API in Production](advanced-topics/76-kubernetes-networking-deep-dive.md) (+ [hands-on lab](advanced-topics/labs/76-kubernetes-networking-deep-dive-lab.md), [cheat sheet](advanced-topics/cheat-sheets/76-kubernetes-networking-deep-dive-cheatsheet.md))
 - [x] 77 — [Load Testing & Performance Engineering at Scale](advanced-topics/77-load-testing-performance-engineering.md) (+ [hands-on lab](advanced-topics/labs/77-load-testing-performance-engineering-lab.md), [cheat sheet](advanced-topics/cheat-sheets/77-load-testing-performance-engineering-cheatsheet.md))
 - [x] 78 — [Kubernetes Autoscaling Deep Dive (HPA, VPA, KEDA & Cluster Autoscaler)](advanced-topics/78-kubernetes-autoscaling-deep-dive.md) (+ [hands-on lab](advanced-topics/labs/78-kubernetes-autoscaling-deep-dive-lab.md), [cheat sheet](advanced-topics/cheat-sheets/78-kubernetes-autoscaling-deep-dive-cheatsheet.md))
+- [x] 79 — [Cloud Migration Strategies for DevOps (6 Rs, Strangler Fig & Zero-Downtime Cutover)](advanced-topics/79-cloud-migration-strategies.md) (+ [hands-on lab](advanced-topics/labs/79-cloud-migration-strategies-lab.md), [cheat sheet](advanced-topics/cheat-sheets/79-cloud-migration-strategies-cheatsheet.md))
 
 ---
 
